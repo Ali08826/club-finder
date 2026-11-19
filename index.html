@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boilermaker Club Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@800&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a semester planner. Left = your free time and filters. Right = week timetable, club cards, saved list. */
+:root {
+  --paper: #f4f5f8;
+  --card: #ffffff;
+  --ink: #1a1f33;
+  --muted: #586078;
+  --line: #dcdfe8;
+  --accent: #d9482b;
+  --free: #dfe8f8;
+  --ok: #1f7a4d;
+  --ok-soft: #e2f3e9;
+  --warn: #8a5a00;
+  --warn-soft: #fbf0d6;
+  --bad: #b3261e;
+  --bad-soft: #fbe7e5;
+  --teams: #2b4fd8;
+  --research: #7c3aed;
+  --pro: #0f766e;
+  --service: #a16207;
+  --rec: #c2410c;
+  --social: #be185d;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --radius: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12152a; --card: #1b1f38; --ink: #eef0fa; --muted: #a6abc8; --line: #2e3456; --accent: #ff7a5c;
+    --free: #22305a; --ok: #6fd6a0; --ok-soft: #173b2c; --warn: #f2c35b; --warn-soft: #3a3020; --bad: #ff8a80; --bad-soft: #3d1f24;
+    --teams: #8aa4ff; --research: #c4a5ff; --pro: #2dd4bf; --service: #e3b341; --rec: #fb923c; --social: #f472b6; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12152a; --card: #1b1f38; --ink: #eef0fa; --muted: #a6abc8; --line: #2e3456; --accent: #ff7a5c;
+  --free: #22305a; --ok: #6fd6a0; --ok-soft: #173b2c; --warn: #f2c35b; --warn-soft: #3a3020; --bad: #ff8a80; --bad-soft: #3d1f24;
+  --teams: #8aa4ff; --research: #c4a5ff; --pro: #2dd4bf; --service: #e3b341; --rec: #fb923c; --social: #f472b6; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font: 16px/1.5 var(--body); }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.1; text-wrap: balance; }
+p { margin: 0; }
+a { color: inherit; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--teams); outline-offset: 2px; }
+
+.shell { max-width: 1280px; margin: 0 auto; padding: 0 24px 40px; }
+header.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 10px; font: 800 22px var(--display); }
+.brand-mark { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 20px; }
+.top-note { color: var(--muted); font-size: 14px; }
+.intro { padding: 28px 0 22px; display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; }
+.intro h1 { font-size: clamp(30px, 4.2vw, 46px); font-weight: 800; letter-spacing: -0.02em; max-width: 17ch; }
+.intro p { color: var(--muted); max-width: 48ch; }
+.notice { font-size: 13px; color: var(--warn); background: var(--warn-soft); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; }
+
+.layout { display: grid; grid-template-columns: 450px minmax(0, 1fr); gap: 24px; align-items: start; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+.controls { display: grid; gap: 22px; }
+@media (min-width: 1100px) { .controls { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; overflow-x: hidden; } }
+.group { display: grid; gap: 10px; }
+.group-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.group-head h2 { font-size: 18px; }
+.hint { font-size: 13px; color: var(--muted); }
+label.field { display: grid; gap: 6px; font-size: 14px; font-weight: 700; }
+input[type="text"], input[type="email"], input[type="search"], input[type="time"] {
+  width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper);
+}
+input[aria-invalid="true"] { border-color: var(--bad); background: var(--bad-soft); }
+
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 12px; font-size: 13px; min-height: 34px; }
+.chip:hover { border-color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.chip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+
+.days { display: grid; gap: 6px; }
+.day-row input[type="time"] { min-width: 0; }
+.day-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; align-items: center; }
+.day-toggle { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 14px; cursor: pointer; }
+.day-toggle input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
+.day-row input[type="time"] { min-height: 36px; padding: 4px 6px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.day-row .to { font-size: 12px; color: var(--muted); }
+.day-row.off input[type="time"] { opacity: 0.35; }
+.err { grid-column: 1 / -1; font-size: 12px; color: var(--bad); }
+.err:empty { display: none; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.range-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.results { display: grid; gap: 20px; min-width: 0; }
+.summary { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.summary h2 { font-size: 26px; }
+.big { color: var(--accent); }
+.view-toggle { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.week { overflow-x: auto; padding: 16px; }
+.week-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.week-head h2 { font-size: 18px; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -2px; }
+.lg-free::before { background: var(--free); }
+.lg-fit::before { border: 1.5px dashed var(--muted); }
+.lg-saved::before { background: var(--accent); }
+.lg-clash::before { background: var(--bad); }
+.grid { display: grid; grid-template-columns: 44px repeat(7, minmax(80px, 1fr)); min-width: 660px; }
+.grid .dh { font: 700 13px var(--body); text-align: center; padding-bottom: 6px; }
+.hours { position: relative; }
+.hours span { position: absolute; right: 6px; font-size: 11px; color: var(--muted); transform: translateY(-50%); font-variant-numeric: tabular-nums; }
+.col { position: relative; border-left: 1px solid var(--line); background-image: linear-gradient(var(--line) 1px, transparent 1px); background-size: 100% var(--hour); }
+.band { position: absolute; left: 3px; right: 3px; background: var(--free); border-radius: 6px; }
+.blk { position: absolute; left: 6px; right: 6px; border-radius: 6px; padding: 2px 5px; font-size: 11px; line-height: 1.15; text-align: left; overflow: hidden; border: 1.5px dashed var(--muted); background: var(--card); color: var(--ink); }
+.blk.saved { background: var(--accent); border: 1.5px solid var(--accent); color: #fff; font-weight: 700; }
+.blk.clash { background: var(--bad); border-color: var(--bad); }
+.blk { font-size: 12px; padding: 4px 6px; line-height: 1.2; overflow-wrap: normal; word-break: normal; }
+.blk .t { display: block; font-size: 10.5px; opacity: 0.8; font-weight: 400; font-variant-numeric: tabular-nums; margin-top: 1px; }
+#clubs-sec, .view-toggle { display: none !important; }
+.blk.half { right: 50%; }
+.blk.half2 { left: 50%; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.club { position: relative; display: flex; flex-direction: column; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 16px 14px 20px; overflow: hidden; }
+.club::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--cat); }
+.club-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cat { font-size: 12px; font-weight: 700; color: var(--cat); text-transform: uppercase; letter-spacing: 0.06em; }
+.hrs { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--paper); white-space: nowrap; }
+.club h3 { font-size: 19px; }
+.club .desc { font-size: 14px; color: var(--muted); }
+.meta { display: grid; gap: 2px; font-size: 13px; }
+.meta strong { font-variant-numeric: tabular-nums; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { font-size: 11px; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: var(--muted); }
+.status { font-size: 13px; padding: 7px 10px; border-radius: 8px; }
+.status.ok { background: var(--ok-soft); color: var(--ok); font-weight: 700; }
+.status.part { background: var(--warn-soft); color: var(--warn); }
+.status.no { background: var(--bad-soft); color: var(--bad); }
+.status ul { margin: 4px 0 0; padding-left: 18px; }
+.card-foot { margin-top: auto; display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.links { display: flex; gap: 12px; font-size: 13px; }
+.save { border: 1px solid var(--ink); background: transparent; border-radius: 9px; padding: 8px 12px; font-weight: 700; font-size: 14px; min-height: 40px; }
+.save[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.empty { text-align: center; padding: 32px 20px; color: var(--muted); }
+.empty h3 { color: var(--ink); font-size: 20px; margin-bottom: 6px; }
+
+.mylist { display: grid; gap: 14px; }
+.mylist-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.stat { background: var(--paper); border-radius: 10px; padding: 8px 12px; min-width: 96px; }
+.stat b { display: block; font: 800 22px var(--display); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+.saved-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.saved-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; font-size: 14px; }
+.saved-list li.clash { border-color: var(--bad); background: var(--bad-soft); }
+.saved-list button { border: 0; background: transparent; color: var(--muted); font-size: 13px; text-decoration: underline; min-height: 32px; }
+.warn { background: var(--bad-soft); color: var(--bad); border-radius: 9px; padding: 8px 12px; font-size: 14px; display: grid; gap: 4px; }
+pre.letter { white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.6 var(--body); background: var(--paper); border-radius: 10px; padding: 14px; margin: 0; max-height: 320px; overflow: auto; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; padding: 10px 16px; font-weight: 700; font-size: 14px; min-height: 44px; text-decoration: none; border: 1px solid var(--ink); }
+.btn.primary { background: var(--ink); color: var(--card); }
+.btn.secondary { background: transparent; color: var(--ink); }
+.btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+.note { font-size: 13px; color: var(--muted); }
+.ok-msg { font-size: 13px; color: var(--ok); min-height: 20px; }
+footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.linkish { border: 0; background: none; color: var(--muted); text-decoration: underline; font-size: 13px; padding: 0; }
+
+@media (max-width: 980px) { .layout, .mylist-grid { grid-template-columns: 1fr; } }
+/* All clubs directory */
+#panel-dir { display: grid; gap: 20px; min-width: 0; }
+#panel-dir[hidden] { display: none; }
+.dir-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.dir-tools input { flex: 1; min-width: 200px; }
+.dgroup { border: 1px solid #8a91a5; border-radius: 10px; padding: 0 12px; margin-top: 8px; }
+.dgroup summary { cursor: pointer; font-weight: 700; padding: 11px 0; display: flex; justify-content: space-between; gap: 8px; }
+.dgroup summary .n { font-weight: 400; color: #333a4d; font-variant-numeric: tabular-nums; }
+.dlist { list-style: none; margin: 0 0 12px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px; }
+.dlist li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; font-size: 14px; }
+.dlist a { font-size: 13px; white-space: nowrap; }
+/* Interests: grouped */
+#interests.presets { display: grid; gap: 8px; }
+.igroup { border: 1px solid var(--line); border-radius: 10px; padding: 0 10px; }
+.igroup summary { cursor: pointer; font-weight: 700; font-size: 14px; padding: 9px 0; }
+.igroup .presets { padding-bottom: 10px; }
+.chip.zero { opacity: 0.55; border-style: dashed; }
+.igroup .less { display: block; margin: 0 0 10px auto; min-height: 32px; }
+.igroup summary::after { content: " · Show more"; font-weight: 400; font-size: 12px; color: var(--muted); }
+.igroup[open] summary::after { content: ""; }
+.chip.zero[aria-pressed="true"] { opacity: 1; }
+/* Organization: numbered steps, tabs, one view at a time */
+.controls { counter-reset: step; }
+.controls .group-head h2::before { counter-increment: step; content: counter(step); display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 8px; border-radius: 50%; background: var(--accent); color: #fff; font: 800 13px var(--body); vertical-align: 2px; }
+#panel-find, #panel-list { display: grid; gap: 20px; min-width: 0; }
+#panel-find[hidden], #panel-list[hidden] { display: none; }
+#panel-find[data-sub="week"] #clubs-sec { display: none; }
+.tabs { display: flex; gap: 6px; position: sticky; top: 0; z-index: 5; background: var(--paper); padding: 8px 0; border-bottom: 1px solid var(--line); }
+.tab { flex: 1; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 10px 12px; font-weight: 700; font-size: 15px; min-height: 44px; }
+.tab:hover { border-color: var(--muted); }
+.tab[aria-current="page"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.badge { display: inline-block; min-width: 22px; padding: 1px 7px; margin-left: 6px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 12px; font-variant-numeric: tabular-nums; }
+.filters-toggle { display: none; width: 100%; justify-content: space-between; text-align: left; font-weight: 700; }
+@media (max-width: 980px) {
+  .filters-toggle { display: flex; }
+  .controls { display: none; }
+  .controls.open { display: grid; }
+}
+/* Theme: black and gold page, white panels. Always light inside panels, even in dark mode. */
+html:root:root:root {
+  --paper: #f4f5f8; --card: #ffffff; --ink: #111111; --muted: #586078; --line: #dcdfe8;
+  --accent: #8e6f3e; --free: #efe6d2; --ok: #1f7a4d; --ok-soft: #e2f3e9; --warn: #8a5a00; --warn-soft: #fbf0d6;
+  --bad: #b3261e; --bad-soft: #fbe7e5; --teams: #2b4fd8; --research: #7c3aed; --pro: #0f766e; --service: #a16207; --rec: #c2410c; --social: #be185d;
+  color-scheme: light;
+}
+body { background: #000; color: #f1ece0; }
+:focus-visible { outline: 3px solid #cfb991; box-shadow: 0 0 0 5px #000; }
+header.top { border-bottom: 2px solid #cfb991; }
+.brand { color: #fff; }
+.intro h1 { color: #cfb991; }
+.intro p { color: #e6e1d3; }
+.summary h2 { color: #fff; }
+.summary .big { color: #cfb991; }
+.tabs { background: #000; border-bottom: 1px solid #4a4130; }
+.tab { background: #fff; color: #111; border-color: #fff; }
+.tab:hover { border-color: #cfb991; }
+.tab[aria-current="page"] { background: #cfb991; color: #000; border-color: #cfb991; }
+.tab .badge { background: #000; color: #cfb991; }
+.filters-toggle { background: #fff; color: #111; }
+footer { border-top: 1px solid #4a4130; color: #bdb6a3; }
+footer a, footer .linkish { color: #cfb991; }
+/* Panels: dark text on white, stronger contrast */
+html:root:root:root { --muted: #333a4d; --line: #aeb4c4; --ink: #000000; --warn: #6b4600; --ok: #14653d; }
+.panel, .club { color: var(--ink); }
+.panel .hint, .panel .note, .panel .desc { color: #333a4d; }
+.panel input { border-color: #8a91a5; background: #fff; color: #000; }
+.panel input::placeholder { color: #5b6277; opacity: 1; }
+.day-row .to { color: #333a4d; }
+.day-row.off input[type="time"] { opacity: 0.6; }
+.chip { border-color: #8a91a5; color: #000; }
+.chip[aria-pressed="true"] { background: #000; color: #fff; border-color: #000; }
+.chip.zero { opacity: 0.8; }
+.igroup { border-color: #8a91a5; }
+.linkish { color: #333a4d; }
+@media (max-width: 480px) { .shell { padding: 0 16px 32px; } .top-note { display: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .club { animation: rise 0.2s ease both; }
+  @keyframes rise { from { transform: translateY(4px); } to { transform: none; } }
+  .chip, .save, .btn { transition: background 0.15s, color 0.15s; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div class="brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" height="48" role="img" aria-label="Club Finder" style="display:block;width:auto"><rect x="10" y="10" width="240" height="240" rx="56" fill="#000000"/><circle cx="117" cy="112" r="64" fill="none" stroke="#CFB991" stroke-width="18"/><line x1="165" y1="160" x2="208" y2="203" stroke="#CFB991" stroke-width="22" stroke-linecap="round"/><g font-family="'Montserrat','Segoe UI','Helvetica Neue',Arial,sans-serif" font-weight="800"><text x="290" y="125" font-size="92" fill="currentColor" letter-spacing="2">Club</text><text x="290" y="215" font-size="92" fill="#8E6F3E" letter-spacing="2">Finder</text></g></svg></div>
+    
+  </header>
+
+  <div class="intro">
+    <h1>Find Purdue clubs that fit your class schedule.</h1>
+    <p>Mark the hours you are free between classes, labs, and work. See which teams and clubs fit, how many hours they take each week, and where two meetings clash.</p>
+  </div>
+
+  <p class="notice"><strong>Student-made tool. Not an official Purdue site.</strong> The organizations are real, but the meeting times and places here are samples. Each club changes its schedule every semester. Check BoilerLink or the club's own page before you go.</p>
+
+  <div class="layout">
+    <aside class="panel controls" id="controls" aria-label="Your free time and filters">
+      <div class="group">
+        <label class="field" for="name">Your name <span class="hint" style="font-weight:400">(for your letter)</span>
+          <input type="text" id="name" maxlength="100" autocomplete="name" placeholder="Alex Taylor">
+        </label>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><h2>When are you free?</h2></div>
+        <p class="hint">Tick a day. Set when your last class ends and when you must stop.</p>
+        <div class="presets" aria-label="Quick fill">
+          <button type="button" class="chip" data-preset="evenings">Weeknights 6–10 pm</button>
+          <button type="button" class="chip" data-preset="late">Weekdays 4–10 pm</button>
+          <button type="button" class="chip" data-preset="weekend">Weekends 9 am–5 pm</button>
+          <button type="button" class="chip" data-preset="clear">Clear all</button>
+        </div>
+        <div class="days" id="days"></div>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><h2 id="int-label">Interests</h2><button type="button" class="linkish" id="int-clear">Clear picks</button></div>
+        <div class="presets" role="group" aria-labelledby="int-label" id="interests"></div>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><h2><label for="hours">Most hours per week</label></h2><span class="range-value" id="hours-out">40 h</span></div>
+        <input type="range" id="hours" min="1" max="40" step="1" value="40" aria-describedby="hours-hint">
+        <p class="hint" id="hours-hint">Meeting time only. Project teams often need extra build hours.</p>
+      </div>
+
+      <div class="group">
+        <label class="field" for="search">Search
+          <input type="search" id="search" placeholder="Try rocket, Bechtel, or ME">
+        </label>
+      </div>
+    </aside>
+
+    <main class="results">
+      <button type="button" class="chip filters-toggle" id="ft" aria-expanded="false" aria-controls="controls"><span id="free-sum"></span><span aria-hidden="true">Change ▾</span></button>
+      <nav class="tabs" aria-label="Sections">
+        <button type="button" class="tab" data-tab="clubs">Week planner</button>
+        <button type="button" class="tab" data-tab="dir">All clubs</button>
+        <button type="button" class="tab" data-tab="list">My list<span class="badge" id="tab-count">0</span></button>
+      </nav>
+      <div id="panel-find" data-sub="list">
+      <div class="summary">
+        <h2 aria-live="polite"><span class="big" id="fit-count">0</span> of <span id="total-count">0</span> clubs fit your week</h2>
+        <div class="view-toggle" role="group" aria-label="Which clubs to show">
+          <button type="button" class="chip" data-view="fit" aria-pressed="true">Fits fully</button>
+          <button type="button" class="chip" data-view="part" aria-pressed="false">Fits fully or partly</button>
+          <button type="button" class="chip" data-view="all" aria-pressed="false">All clubs</button>
+        </div>
+      </div>
+
+      <section class="panel week" aria-labelledby="week-title">
+        <div class="week-head">
+          <h2 id="week-title">Your week <span class="hint" style="font-family:var(--body);font-weight:400">Click a meeting to save it. Scroll sideways if needed.</span></h2>
+          <div class="legend"><span class="lg-free">Free time</span><span class="lg-fit">Meeting that fits</span><span class="lg-saved">Saved</span><span class="lg-clash">Time clash</span></div>
+        </div>
+        <p class="note" id="week-note" hidden>No sample club with meeting times matches these interests. <button type="button" class="linkish" data-go="dir">See all clubs for these interests</button></p>
+        <div class="grid" id="grid"></div>
+      </section>
+
+      <section aria-label="Clubs" id="clubs-sec">
+        <div class="cards" id="cards"></div>
+        <div class="panel empty" id="empty" hidden>
+          <h3>No clubs fit right now.</h3>
+          <p>Tick another day, make a time range longer, or choose <strong>All clubs</strong> to see why each club does not fit.</p>
+        </div>
+      </section>
+
+      </div>
+      <div id="panel-dir" hidden>
+        <section class="panel dir" aria-labelledby="dir-title">
+          <div class="group-head"><h2 id="dir-title" style="font-size:22px">All Purdue clubs</h2><span class="hint" id="dir-count" aria-live="polite">Loading clubs…</span></div>
+          <p class="hint">Names and categories come from BoilerLink (read Nov 19, 2026). A computer sorted each club into one category, so a few may sit in the wrong one. This list has no meeting times. Open BoilerLink to see them.</p>
+          <div class="dir-tools">
+            <input type="search" id="dir-search" placeholder="Search club names" aria-label="Search club names">
+            <button type="button" class="chip" id="dir-open">Expand all</button>
+            <button type="button" class="chip" id="dir-close">Collapse all</button>
+          </div>
+          <p class="hint">Pick categories with the Interests list. On a phone, tap the "Free:" bar at the top.</p>
+          <div id="dir-list"></div>
+          <p class="note" id="dir-empty" hidden>No club matches. Try fewer interests or a shorter search.</p>
+        </section>
+      </div>
+      <div id="panel-list" hidden>
+      <section class="panel mylist" aria-labelledby="mylist-title">
+        <div class="group-head"><h2 id="mylist-title" style="font-size:22px">My club list</h2><span class="hint">Saved in this browser only</span></div>
+        <div class="mylist-grid">
+          <div class="group">
+            <div class="stats">
+              <div class="stat"><b id="st-count">0</b><span>clubs</span></div>
+              <div class="stat"><b id="st-hours">0 h</b><span>hours per week</span></div>
+              <div class="stat"><b id="st-meet">0</b><span>meetings per week</span></div>
+            </div>
+            <div id="clash-warn" class="warn" hidden></div>
+            <ul class="saved-list" id="saved-list"></ul>
+            <p class="note" id="saved-empty">Click a meeting in the week grid to save it. <button type="button" class="linkish" data-go="clubs">Go to Clubs</button></p>
+          </div>
+          <div class="group">
+            <h3 style="font-size:16px">Your letter</h3>
+            <pre class="letter" id="letter"></pre>
+            <label class="field" for="email">Your email address
+              <input type="email" id="email" maxlength="254" autocomplete="email" placeholder="you@purdue.edu" aria-describedby="email-err email-note">
+            </label>
+            <p class="err" id="email-err" style="font-size:13px"></p>
+            <div class="actions">
+              <a class="btn primary" id="mail" href="#" aria-disabled="true">Open email draft</a>
+              <button type="button" class="btn secondary" id="copy">Copy letter</button>
+            </div>
+            <p class="note" id="email-note">The draft opens in your email app, addressed to you. This page does not send email. If no app opens, use Copy letter.</p>
+            <p class="ok-msg" id="copy-msg" role="status"></p>
+          </div>
+        </div>
+      </section>
+      </div>
+    </main>
+  </div>
+
+  <footer>
+    <span><strong>afterclass</strong> · Not affiliated with Purdue University. Full list of 1,000+ organizations: <a href="https://boilerlink.purdue.edu/organizations">BoilerLink</a>.</span>
+    <button type="button" class="linkish" id="reset">Reset everything</button>
+  </footer>
+</div>
+<noscript><p style="padding:20px">Turn on JavaScript to use the club finder.</p></noscript>
+
+<script>
+"use strict";
+const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+const SHORT = { monday:"Mon", tuesday:"Tue", wednesday:"Wed", thursday:"Thu", friday:"Fri", saturday:"Sat", sunday:"Sun" };
+const CATS = {
+  teams:    { label: "Engineering teams" },
+  research: { label: "Research & credit" },
+  pro:      { label: "Career & skills" },
+  service:  { label: "Service" },
+  rec:      { label: "Sports & outdoors" },
+  social:   { label: "Hobbies" }
+};
+const BL = q => "https://boilerlink.purdue.edu/organizations?query=" + encodeURIComponent(q);
+const s = (day, start, end) => ({ day, start, end });
+/* Organization names and descriptions come from Purdue pages. Times and places are samples. */
+const CLUBS = [
+  { id:"psp",  name:"Purdue Space Program", cat:"teams", place:"Armstrong Hall", majors:["AAE","ME","ECE"],
+    desc:"The largest engineering student organization at Purdue. Teams design and build rockets.",
+    sessions:[s("tuesday","19:00","21:00"), s("saturday","10:00","13:00")], search:"Purdue Space Program" },
+  { id:"per",  name:"Purdue Electric Racing", cat:"teams", place:"Bechtel Innovation Design Center", majors:["ME","ECE"],
+    desc:"Design, build, and test a fully electric Formula SAE race car each year.",
+    sessions:[s("monday","18:30","20:30"), s("thursday","18:30","20:30")], site:"https://purdueelectricracing.tech/", search:"Purdue Electric Racing" },
+  { id:"psr",  name:"Purdue Solar Racing", cat:"teams", place:"Bechtel Innovation Design Center", majors:["ME","ECE","AAE"],
+    desc:"Design, build, and race a solar-powered car in national competitions.",
+    sessions:[s("wednesday","19:00","21:00"), s("sunday","13:00","16:00")], site:"https://www.purduesolar.org/", search:"Purdue Solar Racing" },
+  { id:"baja", name:"Purdue Baja Racing", cat:"teams", place:"Bechtel Innovation Design Center", majors:["ME"],
+    desc:"Build an off-road vehicle for the Baja SAE competitions.",
+    sessions:[s("tuesday","18:00","20:00"), s("thursday","18:00","20:00")], search:"Purdue Baja Racing" },
+  { id:"pgp",  name:"Purdue Grand Prix kart team", cat:"teams", place:"Grand Prix track area", majors:["Any"],
+    desc:"Join or form a team that builds and races a go-kart in the Purdue Grand Prix, held since 1958.",
+    sessions:[s("friday","16:00","18:00")], site:"https://engineering.purdue.edu/motorsports/teams", search:"Purdue Grand Prix" },
+  { id:"pair", name:"Purdue AI Racing", cat:"teams", place:"Engineering building (sample)", majors:["ECE","CS","AAE"],
+    desc:"Develop software for autonomous race cars in the Indy Autonomous Challenge.",
+    sessions:[s("wednesday","18:00","20:00")], site:"https://engineering.purdue.edu/Initiatives/AutoSystems/PAIR", search:"Purdue AI Racing" },
+  { id:"first",name:"Purdue FIRST Programs", cat:"service", place:"Local schools", majors:["Any"],
+    desc:"Mentor local school students on FIRST robotics teams.",
+    sessions:[s("monday","17:00","19:00")], search:"Purdue FIRST Programs" },
+  { id:"vip",  name:"Vertically Integrated Projects (VIP)", cat:"research", place:"Set by your team", majors:["Any"],
+    desc:"Join a long-term research or design team for credit. Teams mix students from first year to grad school.",
+    sessions:[s("friday","14:30","16:20")], site:"https://engineering.purdue.edu/VIP", search:"VIP" },
+  { id:"epics",name:"EPICS", cat:"research", place:"Set by your team", majors:["Any"],
+    desc:"Design projects for community partners and earn course credit.",
+    sessions:[s("tuesday","13:30","15:20")], search:"EPICS" },
+  { id:"pmea", name:"Mechanical Engineering Ambassadors", cat:"pro", place:"ME Building (sample)", majors:["ME"],
+    desc:"Represent Purdue ME. Give tours, help new students, and connect with alumni.",
+    sessions:[s("thursday","17:30","18:30")], site:"https://engineering.purdue.edu/PMEA", search:"Mechanical Engineering Ambassadors" },
+  { id:"pts",  name:"Pi Tau Sigma", cat:"pro", place:"ME Building (sample)", majors:["ME"],
+    desc:"The mechanical engineering honor society. Membership is by invitation.",
+    sessions:[s("wednesday","17:30","18:30")], search:"Pi Tau Sigma" },
+  { id:"cyc",  name:"Purdue Cycling Club", cat:"rec", place:"Bechtel (clinic) and campus roads", majors:["Any"],
+    desc:"Group rides for all levels. A past Purdue article lists a bike clinic at Bechtel.",
+    sessions:[s("tuesday","15:00","17:00"), s("saturday","09:00","11:00")], search:"Purdue Cycling Club" },
+  { id:"photo",name:"Photography Club", cat:"social", place:"Stewart Center (sample)", majors:["Any"],
+    desc:"Photo walks, editing workshops, and themed shoots.",
+    sessions:[s("wednesday","19:00","20:00")], search:"Photography Club" },
+  { id:"chess",name:"Chess club", cat:"social", place:"Purdue Memorial Union (sample)", majors:["Any"],
+    desc:"Casual and rated games. Search BoilerLink for the current chess group.",
+    sessions:[s("thursday","19:00","21:00")], search:"chess" },
+  { id:"invest",name:"Student investing club", cat:"pro", place:"Krannert (sample)", majors:["Any"],
+    desc:"Pitch stocks, follow the markets, and manage a practice portfolio. Search BoilerLink for investing groups.",
+    sessions:[s("tuesday","19:00","20:00")], search:"investment" },
+  { id:"speak",name:"Public speaking club", cat:"pro", place:"Stewart Center (sample)", majors:["Any"],
+    desc:"Practice short talks and get feedback. Good preparation for interviews and design reviews.",
+    sessions:[s("monday","19:30","20:30")], search:"speaking" },
+  { id:"im",   name:"Intramural soccer", cat:"rec", place:"Córdova Recreational Sports Center", majors:["Any"],
+    desc:"Make a team with friends or join as a free agent. Search RecWell for intramural dates.",
+    sessions:[s("sunday","18:00","19:00")], search:"soccer" },
+  { id:"code", name:"Coding and hackathon group", cat:"pro", place:"Lawson Computer Science Building (sample)", majors:["CS","ECE","Any"],
+    desc:"Build side projects and prepare for hackathons. Search BoilerLink for coding groups.",
+    sessions:[s("wednesday","18:00","19:30")], search:"hackathon" }
+];
+const BY_ID = Object.fromEntries(CLUBS.map(c => [c.id, c]));
+const INTEREST_GROUPS = [
+  { label: "Academic and career", color: "teams", items: ["Engineering teams", "Research & credit", "Career & skills", "Pre-professional", "Honor societies", "Tutoring & study groups", "Entrepreneurship", "Coding & hackathons", "Data & AI", "Design & creative tech", "Business & finance", "Pre-med & health", "Pre-law & debate"] },
+  { label: "Culture and identity", color: "social", items: ["Cultural & heritage", "International students", "Faith & spirituality", "Language & exchange", "Greek life", "Advocacy & social justice"] },
+  { label: "Arts and media", color: "research", items: ["Music & bands", "Dance & performance", "Theater & film", "Visual arts & crafts", "Writing & publishing", "Photography & video"] },
+  { label: "Recreation", color: "rec", items: ["Club sports", "Intramurals & fitness", "Gaming & esports", "Board games & tabletop", "Outdoors & hiking", "Food & cooking", "Anime & fandom", "Cars & motorsports", "Hobbies"] },
+  { label: "Community and wellness", color: "service", items: ["Service", "Volunteering", "Mental health & wellness", "Environment & sustainability", "Student government", "Mentorship", "Social & networking"] }
+];
+const ALL_INTERESTS = INTEREST_GROUPS.flatMap(g => g.items);
+/* Which interests each sample club belongs to. */
+const CLUB_INT = {
+  psp:   ["Engineering teams", "Design & creative tech"],
+  per:   ["Engineering teams", "Cars & motorsports"],
+  psr:   ["Engineering teams", "Cars & motorsports", "Environment & sustainability"],
+  baja:  ["Engineering teams", "Cars & motorsports"],
+  pgp:   ["Engineering teams", "Cars & motorsports"],
+  pair:  ["Engineering teams", "Data & AI", "Coding & hackathons", "Cars & motorsports"],
+  first: ["Service", "Volunteering", "Mentorship"],
+  vip:   ["Research & credit", "Engineering teams"],
+  epics: ["Research & credit", "Service", "Design & creative tech"],
+  pmea:  ["Career & skills", "Mentorship", "Social & networking"],
+  pts:   ["Honor societies", "Career & skills"],
+  cyc:   ["Club sports", "Outdoors & hiking", "Intramurals & fitness"],
+  photo: ["Photography & video", "Visual arts & crafts", "Hobbies"],
+  chess: ["Board games & tabletop", "Hobbies", "Social & networking"],
+  invest:["Business & finance", "Career & skills"],
+  speak: ["Career & skills", "Pre-law & debate", "Social & networking"],
+  im:    ["Intramurals & fitness", "Club sports"],
+  code:  ["Coding & hackathons", "Data & AI", "Career & skills"]
+};
+CLUBS.forEach(c => c.int = CLUB_INT[c.id] || []);
+const GRID_START = 8, GRID_END = 22, HOUR_PX = 48, LANE_PX = 92;
+
+const $ = id => document.getElementById(id);
+const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+const mins = t => { const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(t || ""); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+function clock(t) { const m = mins(t); let h = Math.floor(m / 60); const mm = m % 60; const ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12; return h + (mm ? ":" + String(mm).padStart(2, "0") : "") + " " + ap; }
+function range(a, b) { const x = clock(a), y = clock(b); return x.slice(-2) === y.slice(-2) ? x.slice(0, -3) + "–" + y : x + "–" + y; }
+const sessText = x => SHORT[x.day] + " " + range(x.start, x.end);
+const hoursOf = c => c.sessions.reduce((t, x) => t + mins(x.end) - mins(x.start), 0) / 60;
+const fmtH = h => (Math.round(h * 10) / 10) + " h";
+
+function defaults() {
+  const avail = {};
+  DAYS.forEach((d, i) => avail[d] = { on: i < 5, start: "17:00", end: "21:30" });
+  return { name: "", avail, interests: [], maxHours: 40, q: "", view: "fit", saved: [], email: "" };
+}
+let state = defaults();
+try {
+  const raw = localStorage.getItem("afterclass-purdue-v1");
+  if (raw) { state = Object.assign(defaults(), JSON.parse(raw)); state.saved = (state.saved || []).filter(id => BY_ID[id]); }
+} catch (e) {}
+function persist() { try { localStorage.setItem("afterclass-purdue-v1", JSON.stringify(state)); } catch (e) {} }
+
+/* ---------- Matching ---------- */
+const dayValid = a => { const st = mins(a.start), en = mins(a.end); return st !== null && en !== null && en > st; };
+function sessionProblem(x) {
+  const a = state.avail[x.day];
+  if (!a.on || !dayValid(a)) return sessText(x) + ": you are not free on " + cap(x.day) + ".";
+  if (mins(a.start) > mins(x.start)) return sessText(x) + ": starts before you are free (" + clock(a.start) + ").";
+  if (mins(a.end) < mins(x.end)) return sessText(x) + ": ends after you must stop (" + clock(a.end) + ").";
+  return null;
+}
+function check(c) {
+  const problems = c.sessions.map(sessionProblem).filter(Boolean);
+  const okCount = c.sessions.length - problems.length;
+  const overHours = hoursOf(c) > state.maxHours;
+  if (overHours) problems.push("Takes " + fmtH(hoursOf(c)) + " per week. Your limit is " + state.maxHours + " h.");
+  let level = "no";
+  if (!problems.length) level = "ok";
+  else if (okCount > 0 && !overHours) level = "part";
+  return { level, problems, okCount };
+}
+function matchesFilter(c) {
+  if (state.interests.length && !c.int.some(i => state.interests.includes(i))) return false;
+  const q = state.q.trim().toLowerCase();
+  if (!q) return true;
+  return [c.name, c.desc, c.place, CATS[c.cat].label, c.majors.join(" "), c.sessions.map(x => x.day).join(" ")].join(" ").toLowerCase().includes(q);
+}
+const firstKey = c => DAYS.indexOf(c.sessions[0].day) * 1440 + mins(c.sessions[0].start);
+const RANK = { ok: 0, part: 1, no: 2 };
+const overlapS = (a, b) => a.day === b.day && mins(a.start) < mins(b.end) && mins(b.start) < mins(a.end);
+function clashes() {
+  const saved = state.saved.map(id => BY_ID[id]); const ids = new Set(); const pairs = [];
+  for (let i = 0; i < saved.length; i++) for (let j = i + 1; j < saved.length; j++)
+    saved[i].sessions.forEach(x => saved[j].sessions.forEach(y => {
+      if (overlapS(x, y)) { ids.add(saved[i].id); ids.add(saved[j].id); pairs.push([saved[i], saved[j], x.day]); }
+    }));
+  return { ids, pairs };
+}
+
+/* ---------- Controls ---------- */
+function buildDays() {
+  const box = $("days"); box.replaceChildren();
+  DAYS.forEach(d => {
+    const row = document.createElement("div"); row.className = "day-row"; row.dataset.day = d;
+    row.innerHTML =
+      '<label class="day-toggle"><input type="checkbox" id="on-' + d + '"> ' + SHORT[d] + '</label>' +
+      '<input type="time" id="from-' + d + '" step="900" aria-label="' + cap(d) + ' free from">' +
+      '<span class="to" aria-hidden="true">to</span>' +
+      '<input type="time" id="to-' + d + '" step="900" aria-label="' + cap(d) + ' free until">' +
+      '<p class="err" id="err-' + d + '" role="alert"></p>';
+    box.append(row);
+    $("on-" + d).addEventListener("change", e => { state.avail[d].on = e.target.checked; update(); });
+    $("from-" + d).addEventListener("change", e => { state.avail[d].start = e.target.value; if (e.target.value) state.avail[d].on = true; update(); });
+    $("to-" + d).addEventListener("change", e => { state.avail[d].end = e.target.value; if (e.target.value) state.avail[d].on = true; update(); });
+  });
+}
+function buildInterests() {
+  const box = $("interests"); box.replaceChildren();
+  state.interests = state.interests.filter(i => ALL_INTERESTS.includes(i));
+  INTEREST_GROUPS.forEach((g, gi) => {
+    const det = document.createElement("details"); det.className = "igroup";
+    det.open = gi === 0 || g.items.some(i => state.interests.includes(i));
+    const sum = document.createElement("summary"); sum.textContent = g.label;
+    const wrap = document.createElement("div"); wrap.className = "presets";
+    g.items.forEach(name => {
+      const n = DIR ? (DIR_BY_CAT[name] || []).length : CLUBS.filter(c => c.int.includes(name)).length;
+      const b = document.createElement("button"); b.type = "button"; b.className = "chip" + (n ? "" : " zero"); b.dataset.cat = name;
+      b.title = DIR ? n + " clubs on BoilerLink" : (n ? n + " sample clubs" : "No sample clubs yet");
+      const dot = document.createElement("span"); dot.className = "dot"; dot.setAttribute("aria-hidden", "true"); dot.style.background = "var(--" + g.color + ")";
+      b.append(dot, name + (n ? " · " + n : ""));
+      b.addEventListener("click", () => { const i = state.interests.indexOf(name); if (i >= 0) state.interests.splice(i, 1); else state.interests.push(name); update(); });
+      wrap.append(b);
+    });
+    const less = document.createElement("button"); less.type = "button"; less.className = "linkish less"; less.textContent = "Show less ▴";
+    less.addEventListener("click", () => { det.open = false; sum.focus(); });
+    det.append(sum, wrap, less); box.append(det);
+  });
+}
+function syncControls() {
+  $("name").value = state.name; $("email").value = state.email; $("search").value = state.q; $("hours").value = state.maxHours;
+  DAYS.forEach(d => { const a = state.avail[d]; $("on-" + d).checked = a.on; $("from-" + d).value = a.start; $("to-" + d).value = a.end; });
+}
+
+/* ---------- Render ---------- */
+function renderControls() {
+  document.querySelectorAll("#interests .chip").forEach(b => b.setAttribute("aria-pressed", String(state.interests.includes(b.dataset.cat))));
+  document.querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === state.view)));
+  $("hours-out").textContent = state.maxHours + " h";
+  DAYS.forEach(d => {
+    const a = state.avail[d]; const bad = a.on && !dayValid(a);
+    document.querySelector('.day-row[data-day="' + d + '"]').classList.toggle("off", !a.on);
+    $("on-" + d).checked = a.on;
+    $("err-" + d).textContent = bad ? "Set an end time that is later than the start time." : "";
+    ["from-", "to-"].forEach(p => bad ? $(p + d).setAttribute("aria-invalid", "true") : $(p + d).removeAttribute("aria-invalid"));
+  });
+}
+
+function renderCards() {
+  const pool = CLUBS.filter(matchesFilter).map(c => ({ c, r: check(c) }));
+  let list = pool;
+  if (state.view === "fit") list = pool.filter(p => p.r.level === "ok");
+  if (state.view === "part") list = pool.filter(p => p.r.level !== "no");
+  list.sort((a, b) => RANK[a.r.level] - RANK[b.r.level] || firstKey(a.c) - firstKey(b.c));
+  const box = $("cards"); box.replaceChildren();
+  list.forEach(({ c, r }) => {
+    const saved = state.saved.includes(c.id);
+    const el = document.createElement("article"); el.className = "club";
+    el.style.setProperty("--cat", "var(--" + c.cat + ")");
+    el.innerHTML =
+      '<div class="club-top"><span class="cat"></span><span class="hrs"></span></div>' +
+      '<h3></h3><p class="desc"></p>' +
+      '<div class="meta"><strong class="when"></strong><span class="where"></span></div>' +
+      '<div class="tags"></div><div class="status"></div>' +
+      '<div class="card-foot"><span class="links"></span><button type="button" class="save"></button></div>';
+    el.querySelector(".cat").textContent = CATS[c.cat].label;
+    el.querySelector(".hrs").textContent = fmtH(hoursOf(c)) + " / week";
+    el.querySelector("h3").textContent = c.name;
+    el.querySelector(".desc").textContent = c.desc;
+    el.querySelector(".when").textContent = "Sample times: " + c.sessions.map(sessText).join(", ");
+    el.querySelector(".where").textContent = c.place;
+    const tags = el.querySelector(".tags");
+    c.majors.forEach(m => { const t = document.createElement("span"); t.className = "tag"; t.textContent = m === "Any" ? "Any major" : m; tags.append(t); });
+    const st = el.querySelector(".status");
+    if (r.level === "ok") { st.className = "status ok"; st.textContent = "✓ Fits your week"; }
+    else {
+      st.className = "status " + r.level;
+      const head = document.createElement("strong");
+      head.textContent = r.level === "part" ? "Fits " + r.okCount + " of " + c.sessions.length + " meetings" : "Does not fit";
+      const ul = document.createElement("ul");
+      r.problems.forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.append(li); });
+      st.append(head, ul);
+    }
+    const links = el.querySelector(".links");
+    const a1 = document.createElement("a"); a1.href = BL(c.search); a1.textContent = "BoilerLink"; links.append(a1);
+    if (c.site) { const a2 = document.createElement("a"); a2.href = c.site; a2.textContent = "Official page"; links.append(a2); }
+    const sb = el.querySelector(".save");
+    sb.setAttribute("aria-pressed", String(saved)); sb.textContent = saved ? "★ Saved" : "☆ Save";
+    sb.setAttribute("aria-label", (saved ? "Remove " : "Save ") + c.name);
+    sb.addEventListener("click", () => toggleSave(c.id));
+    box.append(el);
+  });
+  $("empty").hidden = list.length > 0;
+  $("fit-count").textContent = pool.filter(p => p.r.level === "ok").length;
+  $("total-count").textContent = pool.length;
+  $("week-note").hidden = pool.length > 0;
+}
+
+function renderGrid() {
+  const g = $("grid"); g.replaceChildren(); g.style.setProperty("--hour", HOUR_PX + "px");
+  const H = (GRID_END - GRID_START) * HOUR_PX;
+  g.append(document.createElement("div"));
+  DAYS.forEach(d => { const h = document.createElement("div"); h.className = "dh"; h.textContent = SHORT[d]; g.append(h); });
+  const hours = document.createElement("div"); hours.className = "hours"; hours.style.height = H + "px";
+  for (let h = GRID_START; h <= GRID_END; h += 2) {
+    const sp = document.createElement("span"); sp.style.top = (h - GRID_START) * HOUR_PX + "px";
+    sp.textContent = (h % 12 || 12) + (h < 12 ? "a" : "p"); hours.append(sp);
+  }
+  g.append(hours);
+  const y = t => Math.min(H, Math.max(0, (mins(t) / 60 - GRID_START) * HOUR_PX));
+  const { ids: clashIds } = clashes();
+  const laneMax = {};
+  DAYS.forEach(d => {
+    const col = document.createElement("div"); col.className = "col"; col.style.height = H + "px";
+    const a = state.avail[d];
+    if (a.on && dayValid(a) && y(a.end) > y(a.start)) {
+      const band = document.createElement("div"); band.className = "band";
+      band.style.top = y(a.start) + "px"; band.style.height = (y(a.end) - y(a.start)) + "px"; col.append(band);
+    }
+    const items = [];
+    CLUBS.forEach(c => c.sessions.forEach(x => {
+      if (x.day !== d) return;
+      const saved = state.saved.includes(c.id);
+      if (saved || (!sessionProblem(x) && matchesFilter(c) && check(c).level !== "no")) items.push({ c, x, saved });
+    }));
+    items.sort((p, q) => mins(p.x.start) - mins(q.x.start));
+    /* Put overlapping meetings side by side in lanes, so no block hides another. */
+    const lanes = []; let cluster = []; let clusterEnd = -1;
+    const flush = () => { const n = Math.max(...cluster.map(o => o.lane)) + 1; cluster.forEach(o => o.n = n); cluster = []; };
+    items.forEach(it => {
+      const st = mins(it.x.start), en = mins(it.x.end);
+      if (cluster.length && st >= clusterEnd) { flush(); lanes.length = 0; clusterEnd = -1; }
+      let l = lanes.findIndex(end => end <= st);
+      if (l < 0) { l = lanes.length; lanes.push(en); } else lanes[l] = en;
+      it.lane = l; cluster.push(it); clusterEnd = Math.max(clusterEnd, en);
+    });
+    if (cluster.length) flush();
+    laneMax[d] = Math.max(1, ...items.map(o => o.n));
+    items.forEach((it, i) => {
+      const b = document.createElement("button"); b.type = "button";
+      b.className = "blk" + (it.saved ? " saved" : "") + (it.saved && clashIds.has(it.c.id) ? " clash" : "");
+      b.style.left = "calc(" + (it.lane * 100 / it.n) + "% + 2px)";
+      b.style.width = "calc(" + (100 / it.n) + "% - 4px)";
+      b.style.right = "auto";
+
+      b.style.top = y(it.x.start) + "px"; b.style.height = Math.max(16, y(it.x.end) - y(it.x.start)) + "px";
+      const nm = document.createElement("span"); nm.textContent = it.c.name.replace(/^Purdue /, "").replace(/ \(VIP\)$/, "");
+      const tm = document.createElement("span"); tm.className = "t"; tm.textContent = range(it.x.start, it.x.end);
+      b.append(nm, tm);
+      const label = it.c.name + ", " + range(it.x.start, it.x.end) + (it.saved ? ". Saved. Press to remove." : ". Press to save.");
+      b.title = label; b.setAttribute("aria-label", label);
+      b.addEventListener("click", () => toggleSave(it.c.id));
+      col.append(b);
+    });
+    g.append(col);
+  });
+  g.style.gridTemplateColumns = "44px " + DAYS.map(d => "minmax(" + laneMax[d] * LANE_PX + "px, " + laneMax[d] + "fr)").join(" ");
+  g.style.minWidth = (44 + DAYS.reduce((t, d) => t + laneMax[d] * LANE_PX, 0)) + "px";
+}
+
+function makeLetter() {
+  const saved = state.saved.map(id => BY_ID[id]).sort((a, b) => firstKey(a) - firstKey(b));
+  const free = DAYS.filter(d => state.avail[d].on && dayValid(state.avail[d])).map(d => cap(d) + " " + range(state.avail[d].start, state.avail[d].end));
+  const list = saved.length ? saved : CLUBS.filter(c => check(c).level === "ok").sort((a, b) => firstKey(a) - firstKey(b));
+  const L = [];
+  L.push("Hi " + (state.name.trim() || "there") + ",", "", "Here is your Purdue club list from Afterclass.", "");
+  L.push("Free time: " + (free.length ? free.join("; ") : "none set"), "");
+  if (!list.length) L.push("No clubs fit your free time yet. Try adding a day or a longer time range.");
+  else {
+    L.push(saved.length ? "Clubs you saved:" : "Clubs that fit your week (you have not saved any yet):", "");
+    list.forEach((c, i) => {
+      L.push((i + 1) + ". " + c.name);
+      L.push("   Sample times: " + c.sessions.map(sessText).join(", ") + " | " + c.place);
+      L.push("   BoilerLink: " + BL(c.search));
+      if (c.site) L.push("   Official page: " + c.site);
+    });
+    L.push("", "Total meeting time: " + fmtH(list.reduce((t, c) => t + hoursOf(c), 0)) + " per week.");
+    if (saved.length) clashes().pairs.forEach(([a, b, d]) => L.push("Time clash: " + a.name + " and " + b.name + " overlap on " + cap(d) + "."));
+  }
+  L.push("", "Meeting times are samples. Check each club's current schedule on BoilerLink before you go.", "", "Afterclass (student-made, not an official Purdue tool)");
+  return L.join("\n");
+}
+
+function renderList() {
+  const saved = state.saved.map(id => BY_ID[id]).sort((a, b) => firstKey(a) - firstKey(b));
+  const { ids, pairs } = clashes();
+  const ul = $("saved-list"); ul.replaceChildren();
+  saved.forEach(c => {
+    const li = document.createElement("li"); if (ids.has(c.id)) li.className = "clash";
+    const span = document.createElement("span");
+    const b = document.createElement("strong"); b.textContent = c.name;
+    span.append(b, document.createTextNode(" · " + c.sessions.map(sessText).join(", ")));
+    const r = check(c);
+    if (r.level !== "ok") { const w = document.createElement("div"); w.className = "hint"; w.textContent = r.problems[0]; span.append(w); }
+    const rm = document.createElement("button"); rm.type = "button"; rm.textContent = "Remove";
+    rm.setAttribute("aria-label", "Remove " + c.name); rm.addEventListener("click", () => toggleSave(c.id));
+    li.append(span, rm); ul.append(li);
+  });
+  $("saved-empty").hidden = saved.length > 0;
+  $("st-count").textContent = saved.length;
+  $("st-hours").textContent = fmtH(saved.reduce((t, c) => t + hoursOf(c), 0));
+  $("st-meet").textContent = saved.reduce((t, c) => t + c.sessions.length, 0);
+  const w = $("clash-warn"); w.replaceChildren(); w.hidden = !pairs.length;
+  pairs.forEach(([a, b, d]) => { const p = document.createElement("span"); p.textContent = "⚠ " + a.name + " and " + b.name + " overlap on " + cap(d) + "."; w.append(p); });
+
+  const letter = makeLetter(); $("letter").textContent = letter;
+  const email = state.email.trim(); const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+  const mail = $("mail");
+  mail.setAttribute("aria-disabled", String(!valid));
+  mail.href = valid ? "mailto:" + encodeURIComponent(email) + "?subject=" + encodeURIComponent("My Purdue club list") + "&body=" + encodeURIComponent(letter) : "#";
+  $("email-err").textContent = email && !valid ? "Enter a full email address, such as you@purdue.edu." : "";
+  if (email && !valid) $("email").setAttribute("aria-invalid", "true"); else $("email").removeAttribute("aria-invalid");
+}
+
+function update() { renderControls(); renderCards(); renderGrid(); renderList(); renderTabs(); renderDir(); persist(); }
+function toggleSave(id) { const i = state.saved.indexOf(id); if (i >= 0) state.saved.splice(i, 1); else state.saved.push(id); update(); }
+
+/* ---------- Events ---------- */
+document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => { state.view = b.dataset.view; update(); }));
+document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+  const p = b.dataset.preset;
+  DAYS.forEach((d, i) => {
+    const wk = i < 5; const a = state.avail[d];
+    if (p === "clear") a.on = false;
+    if (p === "evenings" && wk) Object.assign(a, { on: true, start: "18:00", end: "22:00" });
+    if (p === "late" && wk) Object.assign(a, { on: true, start: "16:00", end: "22:00" });
+    if (p === "weekend" && !wk) Object.assign(a, { on: true, start: "09:00", end: "17:00" });
+  });
+  syncControls(); update();
+}));
+$("int-clear").addEventListener("click", () => { state.interests = []; update(); });
+$("hours").addEventListener("input", e => { state.maxHours = +e.target.value; update(); });
+$("search").addEventListener("input", e => { state.q = e.target.value; update(); });
+$("name").addEventListener("input", e => { state.name = e.target.value; renderList(); persist(); });
+$("email").addEventListener("input", e => { state.email = e.target.value; renderList(); persist(); });
+$("mail").addEventListener("click", e => {
+  if ($("mail").getAttribute("aria-disabled") === "true") { e.preventDefault(); $("email").focus(); return; }
+  $("copy-msg").textContent = "Your email app should open with the letter. Check it and press Send there.";
+});
+$("copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(makeLetter()); $("copy-msg").textContent = "Letter copied. Paste it into your email."; }
+  catch (e) {
+    const r = document.createRange(); r.selectNodeContents($("letter"));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    $("copy-msg").textContent = "Letter selected. Press Ctrl+C (Cmd+C on Mac) to copy.";
+  }
+});
+$("reset").addEventListener("click", () => { state = defaults(); syncControls(); update(); });
+
+/* ---------- Tabs ---------- */
+const TABS = ["clubs", "dir", "list"];
+let DIR = null, DIR_ERR = false, DIR_BY_CAT = {}, dirOpen = new Set(), dirKey = null, dirShownCats = [];
+function renderDir() {
+  const q = state.q.trim().toLowerCase(); const sel = state.interests;
+  if ($("dir-search") !== document.activeElement) $("dir-search").value = state.q;
+  if ($("search") !== document.activeElement) $("search").value = state.q;
+  const box = $("dir-list"); box.replaceChildren();
+  const cnt = $("dir-count"); const empty = $("dir-empty"); empty.hidden = true;
+  if (!DIR) { cnt.textContent = DIR_ERR ? "The club list did not load. Reload the page." : "Loading clubs…"; return; }
+  const shown = [];
+  INTEREST_GROUPS.forEach(g => g.items.forEach(cat => {
+    if (sel.length && !sel.includes(cat)) return;
+    const names = (DIR_BY_CAT[cat] || []).filter(n => !q || n.toLowerCase().includes(q));
+    if (names.length) shown.push({ cat, names });
+  }));
+  const total = shown.reduce((t, s) => t + s.names.length, 0);
+  cnt.textContent = total.toLocaleString() + (total === DIR.length ? " clubs" : " of " + DIR.length.toLocaleString() + " clubs");
+  dirShownCats = shown.map(s => s.cat);
+  const key = sel.join("|") + "#" + q;
+  if (key !== dirKey) { dirKey = key; dirOpen = (sel.length || q) ? new Set(dirShownCats) : new Set(); }
+  shown.forEach(s => {
+    const det = document.createElement("details"); det.className = "dgroup"; det.open = dirOpen.has(s.cat);
+    const sum = document.createElement("summary");
+    const nm = document.createElement("span"); nm.textContent = s.cat;
+    const n = document.createElement("span"); n.className = "n"; n.textContent = s.names.length;
+    sum.append(nm, n);
+    sum.addEventListener("click", () => setTimeout(() => { if (det.open) dirOpen.add(s.cat); else dirOpen.delete(s.cat); }));
+    const ul = document.createElement("ul"); ul.className = "dlist";
+    s.names.forEach(name => {
+      const li = document.createElement("li");
+      const t = document.createElement("span"); t.textContent = name;
+      const a = document.createElement("a"); a.href = BL(name); a.rel = "noopener"; a.textContent = "BoilerLink"; a.setAttribute("aria-label", "Find " + name + " on BoilerLink");
+      li.append(t, a); ul.append(li);
+    });
+    det.append(sum, ul); box.append(det);
+  });
+  empty.hidden = shown.length > 0;
+}
+function freeSummary() {
+  const on = DAYS.filter(d => state.avail[d].on && dayValid(state.avail[d]));
+  if (!on.length) return "no days set";
+  const k = d => state.avail[d].start + "-" + state.avail[d].end;
+  if (!on.every(d => k(d) === k(on[0]))) return on.length + " days, times differ";
+  const a = state.avail[on[0]]; const idx = on.map(d => DAYS.indexOf(d));
+  const run = idx.every((v, i) => i === 0 || v === idx[i - 1] + 1);
+  const days = run && on.length > 1 ? SHORT[on[0]] + "–" + SHORT[on[on.length - 1]] : on.map(d => SHORT[d]).join(", ");
+  return days + " " + range(a.start, a.end);
+}
+function renderTabs() {
+  $("tab-count").textContent = state.saved.length;
+  $("free-sum").textContent = "Free: " + freeSummary();
+}
+function showTab(t, push) {
+  if (!TABS.includes(t)) t = "clubs";
+  $("panel-find").hidden = t !== "clubs"; $("panel-dir").hidden = t !== "dir";
+  $("panel-list").hidden = t !== "list";
+  $("panel-find").dataset.sub = t === "week" ? "week" : "list";
+  document.querySelectorAll(".tab").forEach(b => b.dataset.tab === t ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  if (push) { try { if (location.hash !== "#" + t) location.hash = t; } catch (e) {} }
+}
+document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab, true)));
+document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.go, true)));
+$("ft").addEventListener("click", () => { const o = $("controls").classList.toggle("open"); $("ft").setAttribute("aria-expanded", String(o)); });
+window.addEventListener("hashchange", () => { try { showTab(location.hash.slice(1)); } catch (e) {} });
+
+buildDays(); buildInterests(); syncControls(); update();
+try { showTab(location.hash.slice(1)); } catch (e) { showTab("clubs"); }
+$("dir-search").addEventListener("input", e => { state.q = e.target.value; update(); });
+$("dir-open").addEventListener("click", () => { dirOpen = new Set(dirShownCats); renderDir(); });
+$("dir-close").addEventListener("click", () => { dirOpen = new Set(); renderDir(); });
+/* All 1,182 clubs from BoilerLink (read Nov 19, 2026), grouped by category. */
+const DIR_DATA = {
+"Honor societies":["Alpha Epsilon","Alpha Eta Mu Beta","Alpha Lambda Delta Phi Eta Sigma","Alpha Pi Mu","Alpha Psi Omega","Alpha Zeta","Beta Beta Beta Biological Honor Society","Beta Gamma Sigma","Beta Tau","Chi Epsilon","Eta Kappa Nu","Eta Sigma Delta","Gimlet Leadership Honorary","Honors College Residential Society","Iota Sigma Pi","Kappa Delta Pi","Lambda Pi Eta","Mortar Board National Honor Society - Barbara Cook Chapter","Omega Chi Epsilon","Omicron Delta Kappa","Phi Lambda Sigma Pharmacy Leadership Society","Phi Lambda Upsilon","Phi Tau Sigma, Hoosier Chapter","Pi Sigma Alpha","Pi Tau Sigma","Psi Chi Honors Society","Purdue Classics Club: Eta Sigma Phi","Purdue Honors College","Purdue Pre-Law Society","Rho Chi Society","Science Olympiad Club","Sigma Gamma Tau","Sigma Lambda Chi","Tau Beta Pi","Tau Beta Pi (Indianapolis)","Tau Beta Sigma"],
+"Greek life":["Acacia Fraternity","Alpha Chi Omega","Alpha Chi Rho","Alpha Epsilon Pi","Alpha Gamma Delta","Alpha Gamma Rho","Alpha Kappa Alpha Sorority, Inc.","alpha Kappa Delta Phi","Alpha Kappa Lambda Fraternity","Alpha Omicron Pi","Alpha Phi","Alpha Phi Alpha Fraternity, Inc.","Alpha Sigma Phi","Alpha Tau Omega","Alpha Xi Delta","Beta Sigma Psi","Beta Theta Pi","Beta Upsilon Chi","Chi Omega","Chi Psi","Chi Sigma Tau National Fraternity Incorporated","Delta Chi","Delta Delta Delta","Delta Gamma","Delta Kappa Delta Sorority, Inc.","Delta Phi Lambda Sorority, Inc.","Delta Phi Mu Sorority, Inc.","Delta Phi Omega Sorority, Inc.","Delta Pi Rho Fraternity Inc., Alpha Chapter","Delta Sigma Phi","Delta Sigma Theta Sorority, Inc.","Delta Tau Delta","Delta Upsilon","Delta Zeta","Fraternity, Sorority, and Cooperative Life","Gamma Class UIFI:PURDUE","Gamma Phi Beta","Interfraternity Council","Iota Phi Theta Fraternity Inc","Kappa Alpha Pi Pre-Law and Government Fraternity Beta Beta Chapter","Kappa Alpha Psi Fraternity, Inc.- Nu Chapter","Kappa Alpha Theta","Kappa Delta","Kappa Delta Rho","Kappa Kappa Gamma","Kappa Pi Beta","La Unidad Latina, Lambda Upsilon Lambda Fraternity Incorporated","Lambda Theta Alpha Latin Sorority, Incorporated","Multicultural Greek Council","National Pan-Hellenic Council","Omega Psi Phi Fraternity, Inc.","Panhellenic Association","Phi Beta Chi","Phi Beta Sigma Fraternity, Inc.","Phi Delta Theta","Phi Gamma Delta","Phi Kappa Psi","Phi Kappa Sigma","Phi Kappa Tau","Phi Kappa Theta","Phi Mu","Phi Sigma Rho","Pi Beta Phi","Pi Kappa Alpha","Pi Kappa Phi","Psi Upsilon","Sigma Alpha","Sigma Alpha Epsilon","Sigma Chi","Sigma Eta Chapter of Sigma Alpha Mu","Sigma Gamma Rho Sorority, Inc.- Epsilon Gamma","Sigma Kappa","Sigma Lambda Beta","Sigma Lambda Gamma National Sorority, Inc - Purdue University Entity","Sigma Nu Fraternity","Sigma Phi Epsilon","Sigma Pi","Theta Chi","Theta Xi","Triangle Fraternity","Zeta Beta Tau Fraternity","Zeta Phi Beta Sorority, Inc. Epsilon Kappa Chapter","Zeta Psi","Zeta Tau Alpha"],
+"Faith & spirituality":["American Scientific Affiliation Student Chapter at Purdue University","Baha'i Club","Bible Fellowship","Boiler Catholics","Bridges International","Campus Outreach","Chabad","Chi Alpha Christian Fellowship","Christian Pharmacists Fellowship International","Christian Student Center","Christian Student Fellowship","Christian Student Fellowship Indianapolis","Christian Students at Purdue","Christian Veterinary Fellowship","Cornerstone Christian Fellowship","Cross Impact at Purdue","Delight Ministries","Episcopal Student Association","Grace Campus Fellowship","Graduate InterVarsity Christian Fellowship","Greek InterVarsity","Hillel Foundation at Purdue University","HINDU YUVA","Impact Movement","Indy Chi Alpha","Jewish Pilots Association","JKYog Bhagavad Gita Study Circle - Purdue Chapter","Korean Graduate Student Christian Fellowship","Latter-day Saint Student Association","Launch Campus Ministry (Domestic and International)","LCMS-U","LCMS-U of Purdue University-Indianapolis Chapter","LifeBridge at Purdue","Makers Church","Muslim Student Association","Muslim Student Association at Purdue Indianapolis","Muslim Tech Collaborative at Purdue","Muslims in Technology (Indianapolis)","Navigators","Nurses Christian Fellowship","Orthodox Christian Fellowship at Purdue University","PENTECOST STUDENTS AND ASSOCIATES (PENSA) CAMPUS MINISTRY at PURDUE UNIVERSITY","Purdue Chinese Christian Fellowship","Purdue Cru","Purdue Lutheran Ministry","Ratio Christi at Purdue University","Reformed University Fellowship","Salt and Light Christian Fellowship at Purdue","Sikh Student Association at Purdue University","Star City Church Campus Ministry","Students for Salt","Thomistic Institute at Purdue University","Unhurried","University Religious Leaders","WELS Lutheran Campus Ministry","Wesley Campus Ministry","World Peace Buddhists","Worldwide Discipleship Association","Young Life at Purdue"],
+"Club sports":["Badminton Club","Boiler Blade","Boiler Golf Club","Boiler Jump Rope","Boilermaker Wrestling Club","Bondminton at Purdue","Club Sports","Club Sports Organization Page","Club Tennis","Club Volleyball at Purdue in Indianapolis","CRICKET AND SOCIAL OUTREACH","Disc Golf Club","Fencing Club/Team","Field Hockey Club of Purdue","Figure Skating Club at Purdue","Gymnastics Club","Indy Climbing Club","Karate Club","KLUTCHTIME","Korean Baseball Players","Korean Futbol Club of Purdue","Lacrosse Club (Men's)","Lacrosse Club (Women's)","MMA at Purdue","Purdue Badminton Club Indianapolis","Purdue Billiards Club","Purdue Club Baseball","Purdue Club Golf Team","Purdue Crew","Purdue Cycling Club","Purdue Equestrian Team","Purdue Ice Hockey Club","Purdue Intercollegiate Bowling Club","Purdue Intercollegiate Quadball Association","Purdue Judo Club","Purdue Kendo Club","Purdue Longboarding Club","Purdue Men's Club Basketball","Purdue Pickleball Club","Purdue Powerlifting","Purdue Run Club","Purdue Sailing Club","Purdue Squash Club","Purdue STUNT Club","Purdue Swim Club","Purdue Trap and Skeet Club","Purdue University Archery Club","Purdue University FC","Purdue Western Equestrian Team","Purdue Woman's Club Softball","Purdue Women's Soccer Club","Rifle and Pistol Club","Roller Hockey Club","Rugby Football Club (Men's)","Rugby Football Club (Women's)","Run Club of Purdue in Indianapolis","Table Tennis Club","Taekwondo Club","Taekwondo Club of Purdue Indianapolis","Triathlon Club","Ultimate Frisbee Club (Men's)","Ultimate Frisbee Club (Women's)","Volleyball Club (Men's)","Volleyball Club (Women's)","Water Polo Club (Men's)","Water Polo Club (Women's)","Water Ski Club","Women's Club Basketball at Purdue","Women's Volleyball Club at Purdue Indianapolis","Women's Wrestling Club of Purdue"],
+"Gaming & esports":["Game Developers Network","HoYoverse @ Purdue","Independent Game Developers Club","Miniature Wargaming Club of Purdue Indianapolis","Nintendo at Purdue","Pokémon GO Club of Purdue","Purdue Animation, Comic and Game Association","Purdue Fighting Game Club","Purdue League of Legends Group","Purdue Music Gaming Club","Purdue Smash Ultimate Club","Purdue University Gamers Group","Purdue University Overwatch Club","Splatoon at Purdue","The Trading Card Games (TCG) Club","Valorant at Purdue","Wargaming Purdue"],
+"Board games & tabletop":["Board Games Club at Purdue","Boiler Cube","Bridge Purdue","Card Game Club @ Purdue","Chess Club Purdue Indianapolis","Competitive Magic: The Gathering Club","Dungeons of Purdue","Mahjong Club at Purdue","Purdue University Chess Club","Purdue University Quiz Bowl Team","Puzzle Club"],
+"Anime & fandom":["Boiler Comic Vault","Cosplay Creation and Appreciation Club","Fantasy Club","Pokemon Boiler League (Indianapolis)","Pop Culture Collective (Indianapolis)","Purdue Anime Club","Star Wars Club of Purdue University"],
+"Cars & motorsports":["Autonomous Karting Club Of Purdue Indianapolis","Autonomous Motorsports Purdue","Boiler Grand Prix (Indianapolis)","Dauch Center EV Grand Prix Team","Dynoco Racing","Electric Vehicle Club","Endurance Racing Club at Purdue (Indianapolis)","evGrand Prix Organization","Formula 1 @ Purdue","Grand Prix Foundation","Motorcycle Riders of Purdue University","Motorsports At Purdue","Motorsports Engineering Club in Indianapolis","PPA Motorsports","Purdue Automotive Performance Association","Purdue Baja Racing (Society of Automotive Engineers)","Purdue Electric Racing","Purdue Off Road Club","Purdue Solar Racing","Reginald Racing","SAE General (Society of Automotive Engineers)","Sim Racing Club","Sim Racing Club at Purdue","Toro Motorsports","Women in Motorsports Council at Purdue"],
+"Music & bands":["AcaBellas","Asian American and Asian Vocal Ensemble","Boiler Guitar Shop","Boiler Productions","Cadenza Piano Club","Emo Club at Purdue","Heart & Soul","Indian Classical Music Association of Purdue","Jazz Education Network","Kairali at Purdue","Kappa Kappa Psi","Korean Pop Association","Live Events And Productions","Music Club At Purdue Indianapolis","Purdue Electronic Dance Music Club","Purdue Metal Club","Purdue Music Producers","Purdue Musical Organizations","Purdue Soundtracks A Cappella","Purdue Taal","Purdue Varsity Glee Club","Purdue Vinyl Club","Soli @ Purdue","Student Concert Committee"],
+"Dance & performance":["ADVNT","AfroRiddim Elite Dance Troupe","Asian American and Asian Resource and Cultural Center (AAARCC) Lion Dance Team","Baile Folklorico Club","BCC - Jahari Dance Troupe","Boiler Bhangra","Boiler Breakers","Chaiyya at Purdue","Contact Improvisation at Purdue","Contemporary Dance Company","Dance All Out Club","Dance2XS, Incorporated","DanceSport","Fuerza de Baile","Golden Essence Dance Team","Higher Ground Dance Company","Kahaani at Purdue","Krazy Eights Square Dance Club","La Milonguera Argentine Tango Club","Latin & Ballroom Dance Team","Lion Dance Appreciation Club","Night Train Swing Dance","Purdue Aharya","Purdue Dance Team","Purdue Irish Dance Team","Purdue Performance Collaborative","Purdue Raas","Purdue Thandava","Salsa Dance Club","SKY @ Purdue","Tap Dance Club","VariAsian","Varsity Dance Team","XSeries Dance"],
+"Theater & film":["BCC - New Directional Players","Boiler Cinema","Drag Appreciation Club of Purdue","Films","Haunter's Studios at Purdue","Purdue Stand-Up Comedy Club","ReelGenius Movie Trivia Club"],
+"Photography & video":["Agricultural Communicators of Tomorrow","Animation and videography at Purdue","Photography Club"],
+"Writing & publishing":["Arts, Ephemera, Activism","Boiler Book Club","Boiler Medical Humanities Review","Creative Writing Club of Purdue","Elemental Beauty at Purdue University","Exponent Booster Club","History Organization of Purdue","HTM Society","Literary, Interdisciplinary, Theory and Culture Organization","Marwood","Medical Humanities Book Club","Student Editing and Publishing Association","Think Tank Purdue"],
+"Visual arts & crafts":["\"ABC\" - The Art of Bonsai Club","Art Bakery Indianapolis","Art History Student Organization","Arts for the Heart","Boiler Fashion Threads","Crafty Crochets","Crochet 4 Kids at Purdue","Delta Phi Delta Fine Arts Club","Doodle Gang","Fashion and Retail Organization","Fine Arts","Hand in Hand","Knitting, Embroidery, and Fiber Arts Club","Mixed Media Club at Purdue in Indianapolis","Purdue Art Community","Purdue Arts Jewelry and Metals Association","Purdue Chinese Calligraphy Club","Purdue Student National Art Education Association","Scrapbooking Boilers","Sewing and Design Club","STEAM Arts and Crafts Club (Indianapolis)","Textile Art at Purdue","Woodcarvers of Purdue University"],
+"Food & cooking":["Allergenic Foodie Club","Association for Healthcare Foodservice - Purdue","Boiler Kitchen","Fermentation Club","Food Science Club","Food Science Graduate Student Association","Kids in Nutrition at Purdue","Nutrition Science Graduate Student Organization","Nutrition Society","Tea Enjoyers and Appreciators Club","The Boiler Bakers"],
+"Outdoors & hiking":["American Fisheries Society","Bass Fishing Club","Bird Club at Purdue University","Purdue Climbing Club","Purdue Outing Club","Purdue Ski and Snowboard Club"],
+"Intramurals & fitness":["Block Party","Boiler League of Tag","Boilermaker Roundnet Club","CHAARG","Girl Gains","Halberdier Club (Tarkington)","Health and Kinesiology Undergraduate Club","Her Pace Purdue","Hurling Club","KG Unit Women's Basketball Student Section","Parkour and Calisthenics Club","Purdue Boxing","Purdue Brazilian Jiu Jitsu Club","Purdue Intercollegiate Polo Club","Purdue University Intramural Officials Association","Reamer Club","Ross-Ade Brigade","SCUBA Club of Purdue University","Sports for Charity Organization at Purdue University","Streetlifting Club","The Bodybuilding Club at Purdue","TopSpin Purdue Indianapolis","Union Rack and Roll"],
+"Student government":["Bowen School of Construction Student Council","Chinese Engineering Student Council","Department of Forestry and Natural Resources Graduate Student Council","Forestry and Natural Resources Student Council","Graduate Student Education Council","Health and Human Sciences Student Council","Liberal Arts Student Council","Polytechnic Student Council","Purdue Engineering Student Council","Purdue Graduate Student Government","Purdue Science Student Council","Purdue Student Education Council","Purdue Student Government","Purdue Student Government Elections","Residence Hall Association","School of Nursing Student Council","Student Fee Advisory Board","Student Organization Grant Allocation Board"],
+"Pre-law & debate":["Mock Trial Team of Purdue University","Model United Nations","Sociology, Law & Society, and Digital Criminology Club","Student Legal Services","Women In Law"],
+"Pre-med & health":["American Association for Men in Nursing - Central Indiana Chapter","American Association of Pharmaceutical Scientists","American Association of Psychiatric Pharmacists Purdue University Collegiate Chapter","American Medical Women's Association -- Purdue Chapter","American Pharmacists Association Academy of Student Pharmacists","Asian Pacific American Medical Student Association - Purdue University","Bachelor of Science in Pharmaceutical Sciences Club","Be Skin Smart Club","Caduceus Club","Center for Health Excellence Quality and Innovation (CHEQI) Student Ambassadors of Purdue","College of Pharmacy Graduate Student Organization","College of Veterinary Medicine Food Animal Club","Diversity in Nursing Association","Empowering Rural Advocates","First Generation Pre-Health Society","Global Medical Brigades Purdue","Health Sciences Graduate Student Organization","Indiana Pharmacist Alliance - Indiana Academy of Student Pharmacists","Industry Pharmacists Organization - Purdue University","Institute for Healthcare Improvement Open School Purdue University Chapter","International Society for Pharmacoeconomics & Outcomes Research","Kidney Disease Screening and Awareness Program at Purdue University","Latino Medical Student Association - Purdue Chapter","Medical Physics Club of Purdue","Medicinal Chemistry and Molecular Pharmacology Graduate Student Organization","National Association For Black Veterinarians - Purdue Chapter","National Community Oncology Dispensing Association- Purdue Chapter","National Student Speech, Language & Hearing Association","Nursing Community Service","Nursing Graduate Student Organization","Occupational Therapy/Physical Therapy Club/Athletic Training Club","Pediatric Pharmacy Education Done by Students","PIH Engage Purdue","Pre-Dental Club","Pre-Genetic Counseling Club at Purdue University","Pre-Optometry Club","Pre-Physician Associate Club","Pride Student Veterinary Medical Community - Purdue Chapter","Project Icarus - Purdue Chapter","Public Health Student Association","Purdue Academy of Managed Care Pharmacy","Purdue in Indianapolis Medical Association","Purdue Medical Innovation, Networking, and Design","Purdue MEDLIFE Chapter","Purdue One Health Club","Purdue Pharmacy Ambassadors","Purdue Pre-Pharmacy Club","Purdue Pre-Veterinary Medical Association","Purdue SLHS Student Advocacy Council","Purdue Student Academy of Audiology","Purdue Student Nurses' Association","Purdue Student Society of Health-System Pharmacists","Purdue University Pharmacy (PUP)","RX Club","Society of Nuclear Pharmacy","Student American Veterinary Medical Association - Purdue University Chapter","Student Association of Applied Microbiome Sciences","Student Chapter of the Feline Veterinary Medical Association","Student National Pharmaceutical Association","Student Veterinary Emergency and Critical Care Society","The Diabetes Link - Purdue Chapter","Veterinarians as One Inclusive Community for Empowerment","Veterinary Technology Student Organization","Voices in Pharmacy","Voices Of Equity","Women in Healthcare at Purdue","Women of Color in Healthcare Association","Women's Global Health Institute Student Chapter"],
+"Data & AI":["AI Safety Purdue","American Statistical Association Purdue Student Chapter","Bioinformatics Club at Purdue","Business Analytics and Information Management Student Association","Machine Learning at Purdue","Product Data Management Club at Purdue","SIAM@Purdue","Sports Analytics at Purdue","The Data Exchange"],
+"Engineering teams":["Acoustical Society of America / Audio Engineering Society, Purdue Chapter","Aerial Robotics at Purdue","Aero Assist","Aeronautical and Astronautical Engineering Student Advisory Council","Agricultural and Biological Engineering Graduate Student Association","Agricultural Systems Management Club","Am Cong on Surveying & Mapping and Pro Land Survey","American Association of Airport Executives","American Institute of Aeronautics & Astronautics","American Institute of Chemical Engineers","American Society for Engineering Education","American Society for Healthcare Engineering","American Society of Agricultural & Biological Engineers","American Society of Civil Engineers","American Society of Heating, Refrigerating & Air Conditioning Engineers","ASME - American Society of Mechanical Engineers (Indianapolis)","\"ASME\" - American Society of Mechanical Engineers","Association for Women in Aviation Maintenance at Purdue","Autonomous Boating at Purdue","Autonomous Robotics Club of Purdue","Aviation Ambassadors","Aviation Consulting at Purdue","Aviation Graduate Council","Aviation History Club of Purdue","Aviation Technology Student Council","Battlebots Club Indianapolis","Biomedical Engineering Graduate Student Association","Biomedical Engineering Society","Boiler Robotics Club","Boiler Soccer Robot Association","BoilerBots","BoilerSubs (Indianapolis)","Chem-E-Car","Chemical Engineering Graduate Student Organization","Civil Engineering Graduate Student Advisory Council","Civil Engineering Student Advisory Council","Construction Engineering and Management","Davidson School of Chemical Engineering","Defense Civilian Training Corps - Purdue","Earthquake Engineering Research Institute","Ecological Sciences and Engineering Interdisciplinary Graduate Program","Electrical and Computer Engineering Graduate Student Association","Electrical and Computer Engineering Student Society","Embedded Systems at Purdue","ENGINEERING ACADEMIC CAREER CLUB OF PURDUE UNIVERSITY","Engineering Education Graduate Student Association","Engineers Without Borders","Engineers Without Borders USA Purdue University in Indianapolis Chapter","Environmental & Ecological Engineering Graduate Student Organization","Five Dynamics","Flight Zero at Purdue","Formula SAE","Geo-Institute Graduate Student Organization","Global Engineering Alliance for Research and Education (GEARE) Ambassadors","Global Engineering Ambassadors","Graduate Association for Manufacturing Excellence","Graduate Society of Women Engineers at Purdue","Graduate Women in Aerospace","High Speed Plane","Humanoid Robot Club Purdue","IEEE","IEEE Photonics Society Purdue Student Chapter","Indianapolis Graduate Network for Innovation, Training, and Engineering","Industrial Engineering Graduate Student Organization","Institute of Electrical and Electronics Engineers (Indianapolis)","Institute of Industrial and Systems Engineers","Institute of Nuclear Materials Management - Purdue Chapter","Institute of Transportation Engineers","International Students in Mechanical Engineering","Korean American Scientists and Engineers Association Young Generation Purdue","Latinos in Science and Engineering","Mary Cleave Space Leadership Organization","Materials Science and Engineering Graduate Student Association","Mechanical Contractors Association of Indiana","Middle Eastern Engineering Society (Indianapolis)","Multidisciplinary Engineering Student Society","National Electrical Contractors Association","National Society of Black Engineers","National Society of Black Engineers (Indianapolis)","National Society of Sales Engineers @ Purdue","Nuclear Engineering Graduate Organization","Official Mechanical Engineering Graduate Association","Organization of Black Aerospace Professionals Purdue Chapter","Polymer & Additive Manufacturing at Purdue","Power & Fuel Initiative at Purdue","PPA Robotics","Purdue Aviation Day","Purdue Engineering Outreach","Purdue FIRST Programs","Purdue FIRST Programs (Indianapolis)","Purdue Flight Team","Purdue Lunabotics","Purdue Mechanical Engineering Ambassadors","Purdue Orbital","Purdue SAE Aero","Purdue Society of Professional Engineers","Purdue Space Day","Purdue Space Program","Purdue Student Engineering Foundation","Purdue System Thinkers","Purdue University Material Advantage","Railside Robotics","RIISE (Reinventing the Interface of Inclusivity, Sports and Engineering)","Roboracer @ Purdue","Robot in Three Days","School of Engineering Education","Semiconductor Student Alliance - Purdue Chapter","Small Business Engineering Club","Society of Aeronautical Engineering Technology","Society of Asian Scientists and Engineers","Society of Environmental and Ecological Engineers","Society of Hispanic Professional Engineers","Society of Hispanic Professional Engineers (SHPE) at Purdue University in Indianapolis","Society of Manufacturing Engineers","Society of Manufacturing Engineers 351","Society of Women Engineers","Society of Women Engineers (Indianapolis)","Society of Women in Integrated Business and Engineering","Space Biomedical Systems","Space-Loving Individuals Negotiating Gravity","Student Organization Space (KRACH, PMU, STEW)","Sub Orbital Launch Vehicle Explorer","Technology and Engineering Education Collegiate Association","The Aviation Research Club of Purdue","Theme Park Engineering and Design at Purdue","UAV Club at Purdue University","Undergraduate Rocket Propulsion Laboratory at Purdue","Unmanned Aerial Vehicle at Purdue","Vertical Flight Systems Purdue","VEX U Team Purdue Indianapolis","Women in Aerospace","Women in Aviation","Women in Industrial and Systems Engineering","Women in Materials Science Engineering","Women in Mechanical Engineering at Purdue","Women In Nuclear at Purdue University"],
+"Coding & hackathons":["ACM Purdue Chapter","BDPA - Purdue Chapter","BinaryHeart at Purdue","Blue Team at Purdue","Boilerexams","BoilerMake","Cloud Club","Cloud Native Association at Purdue","Competitive Programmers Union","Computer Science Club (Indianapolis)","Computer Science Graduate Student Association","Computer Science Undergraduate Student Board","Computer Science Women's Network","Computer Science Women's Network (Indianapolis)","Creative Coding Club","DefCon Group 765","Ethical Hackers of Purdue","FPGA Organization for Research, Growth, and Education","Girls Who Code College Loops","Graduate Students of Applied and Creative Computing","Hack the Future at Purdue","Hello World","Kappa Theta Pi Purdue","LeetCode Club","Minority Technology Association","PINSecurity (Indianapolis)","Purdue Capture the Flag Team","Purdue Cyber Forensics","Purdue Hackers","Purdue Information Technology Professionals","Purdue Linux Users Group","Quantum Student Organization","Stack at Purdue","TechPals @ Purdue","THE CLOUD NETWORK","USB Indy","Women in Cybersecurity Club","Women in Cybersecurity Purdue Indianapolis"],
+"Design & creative tech":["3D Printed Prosthetics Club","3D Printing Club","ACM SIGGRAPH","Adapted Toys for Children","American Institute of Graphic Arts","American Society of Interior Designers and International Interior Design Association","Architectural Design Club","Boilermaker Rube Goldberg Team","Design at Purdue","Industrial Designers Society of America at Purdue University","Prototyping at Purdue","Purdue Association of Learning Design and Technology","Purdue User Experience Design","Student Design Organization (Indianapolis)","Tea Time Animation Club","Themed Entertainment Association at Purdue (TEA) (Indianapolis)","Toy Box of Purdue","Virtual Reality Experience Club","Women in Animation at Purdue"],
+"Business & finance":["180 Degrees Consulting Purdue","Accounting Association","Agribusiness Club","Agricultural Economics (AgEcon) Graduate Student Organization","Banking & Markets Club at Purdue","Boiler Financial Track","BoilerHedge","Boilermaker Consulting","Business & Engineering Ethics Roundtable","Business and Technology Association","Business Office for Student Organizations","Consult Your Community Purdue Chapter","Daniels Operations Club","Evolve At Purdue","Financial Planning Association Student Chapter at Purdue","Investment & Trading at Purdue","Krannert Graduate Marketing Association","Marketing","National Retail Federation Student Association Purdue Chapter","Operations and Supply Chain Organization","Pioneers@Purdue","Professional Sales and Agri-Marketing Association","Project Management at Purdue","Purdue Association for Latin American Business","Purdue Economics Association","Purdue Financial Management Association","Purdue Marketing Association","Purdue Quantitative Finance Club","Purdue Sports Business Association","PurdueTHINK","Quantitative Business Economics Association","School of Business Career Council","School of Business Council","Scope Consulting","Society of Minority Managers","Solutions","Startup Consulting at Purdue","Student Managed Investment Fund (SMIF)","TAMID Group At Purdue University","The Master of Science in Finance Graduate Student Club","The Medical Sales Club","Veterinary Business Management Association","Women in Business","Women in Consulting","Women in Economics Club","Women in Sales Club at Purdue"],
+"Entrepreneurship":["ALPFA","Amplify Purdue: The Indianapolis Entrepreneurship and Innovation Collective","Ascend Purdue","Bechtel Center Innovators of Tomorrow","Beta Alpha Psi","BoilerWork","buildpurdue","Collegiate DECA","Delta Sigma Pi","Doster Leadership Conference Student Board","InnovateHer","LaunchPad","Locolist Entrepreneurial Experience","Momentum at Purdue","OZ Lab Startup","Patent Club at Purdue","Phi Gamma Nu","Startup Club Indy","The Anvil","Venture Capital Club at Purdue","Ventures & Innovation in Technology, AI, & Life Sciences"],
+"Research & credit":["Botany and Agronomy Research Club","Eli Lily and Company/Purdue University Research Alliance Center","Forest Products Research Society","Path to Research","Psychedelic Research Association at Purdue","Purdue iGEM","Purdue University Interdisciplinary Life Science Graduate Student Organization","Research Exchange Club","Space & Earth Analogs Research Chapter of Purdue","Undergraduate Research Society of Purdue"],
+"Tutoring & study groups":["Heads Up Learning Organization","Legacy Leaders","Purdue Undergraduate Women in Science Programs"],
+"Mentorship":["College Mentors for Kids","College of Pharmacy-Peer Mentoring Program","International Student Mentorship Program"],
+"Language & exchange":["Ambassadors for Purdue Interdisciplinary Center for Korean Studies (PICKS)","American Sign Language Club","French Club","German Culture Club","Italian Club of Purdue","School of Languages and Cultures GRADUATE STUDENT COMMITTEE","Spanish Conversation Club"],
+"International students":["Afghan Students Association of Purdue","African Students' Association","American India Foundation (Purdue)","Asian American Association","Asian Student Union Board","Association of Zamorano Alumni","Bangladesh Students Association","Campus Connections Club","Caribbean Students Association","Chinese American Student Association","Colombian Student Association at Purdue","Costa Rican Students Association at Purdue","Cross Cultural Association","Fulbright Association","Ghana Student Association at Purdue","GUJARATI CULTURAL ASSOCIATION OF PURDUE","Hong Kong Student Association","Indian Student Association","Indonesian Student Association","International Professionals of Purdue","International Student Services","Iranian Cultural Club","Japan Student Association","Japan Student Association in Indianapolis","Kazakh Student Association","Korean American Student Association","Korean Association","Korean Student Association Purdue Indianapolis","Korean Undergraduate Student Association","Lafayette Ubuntu International Community","Malaysian Students Association","Mana Telugu Association of Purdue","Marathi Mandal at Purdue","Mexican and Mexican-American Association","Nepali Society at Purdue","Nigerian Students Association at Purdue","Pakistani Student Association at Purdue University","Peruvian Student Association at Purdue University","Polish Student Organization","Purdue Arab Society","Purdue Immigrant Allies","Purdue Singapore Students' Association","Purdue University Chinese Students and Scholar's Association","Purdue University Thai Students Association","South Indian Association","Southwest Asian and North African Student Union","Sri Lankan Student Association at Purdue","Taiwanese Student Association","Tamil Sangam of Purdue","The Azerbaijani Student Association","Turkish Student Association","Ukrainian Student Association","UR Global Club","Vietnamese International Student Association","Vietnamese Student Association at Purdue University"],
+"Cultural & heritage":["Armenian Club of Purdue","Asian & Asian American Gardening Club","Asian American and Asian Resource and Cultural Center","Asian and Asian American Graduate Student Association","BCC - Black Thought Collective","BCC - Black Voices of Inspiration","BCC - Haraka","Black Graduate Student Association","Black Student Union","BRASA Purdue","Cultural Collaboration Society","Ethiopian/Eritrean Student Association","Hellenic Student Association","Hispanos Unidos in Purdue Indianapolis","I Love Taiwan Club","Jardín Semillas Gardening Club","Latinx Graduate Student Organization","Latinx Student Union (LSU)","Multicultural Science Ambassadors","Multiracial and Interracial Adoptee Club","Native American Educational Cultural Center","PCI - Purdue Chapter","Puerto Rican Student Association","Purdue Filipino Association","Purdue Hawai`i Club","Purdue University Tagore Society","Sanskriti: South Asian Cultural Association (Indianapolis)","University Residences Multicultural Connections","We Are Saath Purdue"],
+"Environment & sustainability":["Boiler Green Initiative","Boilers for Sustainable Dining","Department of Forestry and Natural Resources","Environmental Science Club","Indoor Farming Club at Purdue in Indianapolis","Purdue Student Chapter of The Wildlife Society","Purdue Student Sustainability Council","Society of American Foresters","Society of Arboriculture, Student Chapter","Student Chapter of Environmental Education","Student Environmental Health & Safety Association","Sustainable Energy Club at Purdue in Indianapolis","The Sustainable Energy Club of Purdue"],
+"Mental health & wellness":["Active Minds at Purdue University","American Foundation for Suicide Prevention","Bloom","Boilers Supporting Boilers","Counseling and Development Student Group","Counseling and Psychological Services","Grief Sucks","Mental Health Action Week","National Alliance on Mental Illness on Campus Purdue University","Recreation & Wellness","The Gray Matters Collective - Purdue"],
+"Volunteering":["A Cause for Paws","ACE Campus Food Pantry","American Red Cross Club of Purdue University","Be The Match on Campus Purdue","Boiler Substance Awareness Network","Brain Exercise Initiative - Purdue Chapter","Convocations Volunteer Network","Diversity, Retention Initiatives through Volunteering,...","Heart Club of Purdue University","Purdue Pet-a-Puppy Club","Purdue University Habitat for Humanity","Rotaract Club","Stempower","Student Chapter of the Association of Shelter Veterinarians","The Alzheimer's Initiative - Purdue Chapter","The Pearl Project Purdue","University Blood Initiative at Purdue"],
+"Service":["A Kid Again- Purdue Chapter","Adopt-A-Grandparent","Alpha Phi Omega - Alpha Gamma","Alzheimer's Buddies: Purdue Chapter","Best Buddies","Blood Cancer United at Purdue University","Cancer Kids First- Purdue Chapter","Cervivor University Purdue","Clothing for Cancer at Purdue","Colleges Against Cancer: Purdue Relay For Life","Dance Marathon","Doctors Without Borders Purdue Chapter","Gift Of Life at Purdue University","Global Partners in Hope - Purdue Chapter","Golden Z Club of Purdue University","Healing, Engagement and Relief Organization","Horizon's Student Support Club","Letters of Love Purdue","Operation Smile - Purdue Chapter","Project RISHI","Protect Purdue Ambassadors","Purdue Big Brothers Big Sisters","Purdue Circle K International","Purdue Collegiate 4-H","Purdue Foundation Student Board","Scouting Purdue","“She’s the First” Purdue Campus Chapter","Special Olympics (SO) College Purdue Chapter","Students Providing Aid @ Purdue","Swipe Out Starvation","The Period Project","UNICEF Campus Initiative"],
+"Advocacy & social justice":["Alexander Hamilton Society | Purdue University Chapter","All For Autism Purdue University","Allied Scholars for Animal Protection Purdue","Animal Behavior and Welfare Club","Boiler Advocates for Student Empowerment","Boiler Gold-Makers","Boilers In Action","Canine Companions - Collar Scholars at Purdue University","Center for Advocacy, Response & Education","College Democrats","Disabled Student Union at Purdue","Effective Altruism Purdue","Feminist Action Coalition for Today: Purdue Women's Studies Student Organization","First Generation Student Club","Furdue","Fusion Awareness Organization","Gender Minorities in Physics","LGBTQ Center","METOO Purdue University","National Association For the Advancement of Colored People","National Association of Colored Women’s Clubs, Inc. (NACWC, Inc.) - V.A.L.U.E.","National Gay Pilots Association","Network of Enlightened Women at Purdue University","oSTEM @ Purdue University","Political Science Graduate Student Association","Pride PBO","Prism Social","Pro-Life Boilermakers","Purdue American Association of University Women","Purdue University College Republicans","Purdue University Students for Justice in Palestine","Purdue University Young Americans for Freedom","Queer Graduate Student Association","Queer Student Alliance","TEDxPurdueU","The Pet Rescue Club","The Political Discourse Club","Transfer Students of Purdue","Turning Point USA at Purdue University","Undergraduate Philosophy Society of Purdue","Women In Philosophy Society - Purdue Chapter","Young Democratic Socialists of Purdue"],
+"Career & skills":["ASPIRE Student Association - Purdue Chapter","Center for Career Opportunities","Construction Management Association of America - Purdue University","Curriculum & Instruction Graduate Student Association","History Graduate Student Association","IDAAS GRADUATE STUDENT ASSOCIATION","Liberal Arts Career Development","Purdue Alumni Student Experience","Roger C. Stewart Leadership and Professional Development Department","Young Professionals of Human Resource Development"],
+"Pre-professional":["Alpha Chi Sigma","Alpha Eta Rho","Alpha Kappa Psi","American Chemical Society, Student Affiliate","American Foundry Society","American Foundry Society of Purdue Polytechnic Kokomo","American Nuclear Society","Army ROTC Corp of Cadets","ASHA-Purdue Chapter","Associated Builders & Contractors","Associated General Contractors - Student Chapter","Association for Women in Communications","Beta Psi Omega","BioForge in Indianapolis","Biological Sciences Graduate Student Association","Biology Club","Government and Public Affairs Association","Health and Human Sciences: Professional, Undergraduate, Learning, and Social Excellence","Human Development and Family Science Graduate Student Association","Human Development and Family Studies Club","Human Factors and Ergonomics Society, Student Chapter","Indiana Association of Agricultural Educators-Purdue","Indiana Association of Family and Consumer Sciences at Purdue","Indiana Farm Bureau Collegiate Chapter at Purdue","Kappa Epsilon","Kappa Psi","Lambda Tau","MANRRS-Purdue University","Marine Biology Club","National Association of Home Builders","Old Masters","Paleontology Society of Purdue University","Phi Delta Chi","Physics Graduate Student Association","PICR-Undergraduate Society","Professional Asian Pilots Association","Professional Practice Ambassadors","Professional Practice Ambassadors - Indianapolis","Public Relations Student Society of America","Purdue American Society of Landscape Architects","Purdue Aspiring Educators","Purdue Biochemistry Club","Purdue Forensic Science Club","Purdue NASTT Student Chapter","Purdue National Security & Defense Society","Purdue Professional Pilots","Purdue Psychology Club","Purdue University Chapter of Professional Convention Management Association","Society for Human Resource Management","Society for the Advancement of Chicanos and Native Americans in Science","Society of Student Constructors (Indianapolis)","Steps to Leaps Students","The Bowen Laboratory Student Advisory Council","Women in Construction Management","Women in Construction Management of Indianapolis"],
+"Social & networking":["3rd and West Hall Club","Ann Tweedale Cooperative","Boiler Royale","C Richard Petticrew Forum","Cary Club","Cavalier Club","Chauncey Cooperative","Circle Pines","Crane Residence Club (Indianapolis)","Cultural Events","Devonshire Cooperative","Excalibur Club","First Street Towers Titan Club","Gemini Cooperative","Hawkins Council","Hillenbrand Hall Phoenix Club","Hilltop Council","Homecoming","Hussar Club (Owen Hall)","Itasca Club","Maclure Cooperative","Paint Crew (The) Student Section Fan Club","Parker Halls Parliament","Presidents Roundtable","Purdue Ag Week Task Force","Purdue Cooperative Council","Recreation","Royal Highlanders (McCutcheon)","SCHOLAR","Scholarship","Shoemaker","Shreve Club","Special Events","Squirrel Club","Stewart Cooperative","Student Life in Indianapolis","The South Side Club","Traditional Events","Twin Pines Cooperative House","UR Boiler Apartments Cardinal Club","Windsor Hall Club (WHC)"],
+"Hobbies":["Act Natural","Ad Liberation","Agronomy Club","Battle Association of Purdue","Bee Campus - Purdue Chapter","Beekeeping Club","Block and Bridle Club","Boiler Rock Collectors","Boilermaker Farm Toy Fanatics","Botany Club","Dairy Club","Earth, Atmospheric, and Planetary Sciences Graduate Student Association","Fluid Power Club","Global League of Magicians & Mentalists","Heritage Breeds Club at Purdue University","Horticulture Society","Juggling and Unicycling Club","Mathematics Society","Medieval Society","Pork Interest Group","Purdue Agricultural Council","Purdue Amateur Radio Club","Purdue Astronomy Club","Purdue Goat Club","Purdue Meat Science Club","Purdue Pilots, Inc.","Purdue Railroad Club","Purdue Reptile and Amphibian Club","Purdue Student Farm Organization","Purdue University Meteorological Association","Purdue University Poultry Club","Purdue Zoological Society","Severe Weather Association of Purdue","Society of Physics Students","Structural Biology and Biophysics Club","Students for Cultivating Change - Purdue Agriculture","The Crazy Monkeys","The Naturalist Club of Purdue","The Next Big Thing","Thomas Say Entomological Society","Whimsy@Purdue"]
+};
+Promise.resolve(Object.entries(DIR_DATA).flatMap(([c, names]) => names.map(n => ({ n, c })))).then(rows => {
+  DIR = rows; DIR_BY_CAT = {};
+  rows.forEach(r => { (DIR_BY_CAT[r.c] = DIR_BY_CAT[r.c] || []).push(r.n); });
+  buildInterests(); update();
+}).catch(() => { DIR_ERR = true; renderDir(); });
+</script>
+</body>
+</html>
