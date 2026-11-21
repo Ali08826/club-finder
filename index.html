@@ -8,7 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
+.send-msg { font-size: 13px; min-height: 20px; }
+.send-msg.ok { color: var(--ok); font-weight: 700; }
+.send-msg.bad { color: var(--bad); }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
 /* Layout idea: a semester planner. Left = your free time and filters. Right = week timetable, club cards, saved list. */
 :root {
   --paper: #f4f5f8;
@@ -257,6 +262,9 @@ html:root:root:root { --muted: #333a4d; --line: #aeb4c4; --ink: #000000; --warn:
   @keyframes rise { from { transform: translateY(4px); } to { transform: none; } }
   .chip, .save, .btn { transition: background 0.15s, color 0.15s; }
 }
+/* Reset button: same look as the active tab (gold, black bold text). */
+footer #reset { background: #cfb991; color: #000; border: 1px solid #cfb991; border-radius: 10px; padding: 10px 16px; min-height: 44px; font-weight: 700; font-size: 14px; text-decoration: none; }
+footer #reset:hover { border-color: #fff; }
 </style>
 </head>
 <body>
@@ -308,6 +316,15 @@ html:root:root:root { --muted: #333a4d; --line: #aeb4c4; --ink: #000000; --warn:
         <label class="field" for="search">Search
           <input type="search" id="search" placeholder="Try rocket, Bechtel, or ME">
         </label>
+      </div>
+
+      <div class="group">
+        <label class="field" for="email-side">Type your email
+          <input type="email" id="email-side" maxlength="254" autocomplete="email" placeholder="you@purdue.edu" aria-describedby="email-side-err">
+        </label>
+        <p class="err" id="email-side-err"></p>
+        <div class="actions"><button type="button" class="btn primary" id="send-side">Send me my club list</button></div>
+        <p class="send-msg" id="send-msg-side" role="status"></p>
       </div>
     </aside>
 
@@ -382,10 +399,12 @@ html:root:root:root { --muted: #333a4d; --line: #aeb4c4; --ink: #000000; --warn:
             </label>
             <p class="err" id="email-err" style="font-size:13px"></p>
             <div class="actions">
-              <a class="btn primary" id="mail" href="#" aria-disabled="true">Open email draft</a>
+              <button type="button" class="btn primary" id="send">Send email</button>
+              <a class="btn secondary" id="mail" href="#" aria-disabled="true">Open email draft</a>
               <button type="button" class="btn secondary" id="copy">Copy letter</button>
             </div>
-            <p class="note" id="email-note">The draft opens in your email app, addressed to you. This page does not send email. If no app opens, use Copy letter.</p>
+            <p class="send-msg" id="send-msg" role="status"></p>
+            <p class="note" id="email-note">Send email sends the letter to your address. Check your spam folder if it does not arrive.</p>
             <p class="ok-msg" id="copy-msg" role="status"></p>
           </div>
         </div>
@@ -403,6 +422,18 @@ html:root:root:root { --muted: #333a4d; --line: #aeb4c4; --ink: #000000; --warn:
 
 <script>
 "use strict";
+/* ---------- Email sending (EmailJS) ----------
+   Setup, one time (free plan: 200 emails per month):
+   1. Make an account at https://www.emailjs.com
+   2. Email Services > Add New Service > Gmail. Copy the Service ID.
+   3. Email Templates > Create New Template:
+        To Email: {{to_email}}    Subject: {{subject}}    Content: {{message}}
+      Copy the Template ID.
+   4. Account > General: copy the Public Key.
+   5. Paste the three values below.
+   6. Account > Security: add your site's domain to the allowed list. */
+const EMAILJS = { publicKey: "bQFtGvouZYO4Dz9Ja", serviceId: "service_jjsfpuo", templateId: "template_cz6vdoq" };
+const EMAIL_READY = !Object.values(EMAILJS).some(v => !v || v.startsWith("YOUR_"));
 const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
 const SHORT = { monday:"Mon", tuesday:"Tue", wednesday:"Wed", thursday:"Thu", friday:"Fri", saturday:"Sat", sunday:"Sun" };
 const CATS = {
@@ -603,8 +634,18 @@ function buildInterests() {
   });
 }
 function syncControls() {
-  $("name").value = state.name; $("email").value = state.email; $("search").value = state.q; $("hours").value = state.maxHours;
+  $("name").value = state.name; $("email").value = state.email; $("email-side").value = state.email; $("search").value = state.q; $("hours").value = state.maxHours;
   DAYS.forEach(d => { const a = state.avail[d]; $("on-" + d).checked = a.on; $("from-" + d).value = a.start; $("to-" + d).value = a.end; });
+}
+
+const TEMP_DOMAINS = ["mailinator.com","10minutemail.com","guerrillamail.com","guerrillamail.net","tempmail.com","temp-mail.org","yopmail.com","trashmail.com","sharklasers.com","getnada.com","throwawaymail.com","dispostable.com","maildrop.cc","fakeinbox.com","mintemail.com","emailondeck.com","mohmal.com","moakt.com","tempail.com","discard.email","mailnesia.com","spam4.me","tempinbox.com","minuteinbox.com"];
+/* Returns an error message, or "" when the email looks real. Browser-side check only. */
+function emailProblem(e) {
+  if (!e) return "";
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(e)) return "Enter a full email address, such as you@purdue.edu.";
+  const d = e.split("@")[1].toLowerCase();
+  if (TEMP_DOMAINS.some(t => d === t || d.endsWith("." + t))) return "Use a real email address. Temporary email services are not allowed.";
+  return "";
 }
 
 /* ---------- Render ---------- */
@@ -742,7 +783,7 @@ function makeLetter() {
   L.push("Free time: " + (free.length ? free.join("; ") : "none set"), "");
   if (!list.length) L.push("No clubs fit your free time yet. Try adding a day or a longer time range.");
   else {
-    L.push(saved.length ? "Clubs you saved:" : "Clubs that fit your week (you have not saved any yet):", "");
+    L.push("Clubs I can join:", "");
     list.forEach((c, i) => {
       L.push((i + 1) + ". " + c.name);
       L.push("   Sample times: " + c.sessions.map(sessText).join(", ") + " | " + c.place);
@@ -779,12 +820,12 @@ function renderList() {
   pairs.forEach(([a, b, d]) => { const p = document.createElement("span"); p.textContent = "⚠ " + a.name + " and " + b.name + " overlap on " + cap(d) + "."; w.append(p); });
 
   const letter = makeLetter(); $("letter").textContent = letter;
-  const email = state.email.trim(); const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+  const email = state.email.trim(); const problem = emailProblem(email); const valid = !!email && !problem;
   const mail = $("mail");
   mail.setAttribute("aria-disabled", String(!valid));
-  mail.href = valid ? "mailto:" + encodeURIComponent(email) + "?subject=" + encodeURIComponent("My Purdue club list") + "&body=" + encodeURIComponent(letter) : "#";
-  $("email-err").textContent = email && !valid ? "Enter a full email address, such as you@purdue.edu." : "";
-  if (email && !valid) $("email").setAttribute("aria-invalid", "true"); else $("email").removeAttribute("aria-invalid");
+  mail.href = valid ? "mailto:" + encodeURIComponent(email) + "?subject=" + encodeURIComponent("Clubs I can join") + "&body=" + encodeURIComponent(letter) : "#";
+  $("email-err").textContent = problem; $("email-side-err").textContent = problem;
+  ["email", "email-side"].forEach(id => { if (problem) $(id).setAttribute("aria-invalid", "true"); else $(id).removeAttribute("aria-invalid"); });
 }
 
 function update() { renderControls(); renderCards(); renderGrid(); renderList(); renderTabs(); renderDir(); persist(); }
@@ -807,11 +848,48 @@ $("int-clear").addEventListener("click", () => { state.interests = []; update();
 $("hours").addEventListener("input", e => { state.maxHours = +e.target.value; update(); });
 $("search").addEventListener("input", e => { state.q = e.target.value; update(); });
 $("name").addEventListener("input", e => { state.name = e.target.value; renderList(); persist(); });
-$("email").addEventListener("input", e => { state.email = e.target.value; renderList(); persist(); });
+function setEmail(v, from) {
+  state.email = v;
+  ["email", "email-side"].forEach(id => { if (id !== from) $(id).value = v; });
+  renderList(); persist();
+}
+$("email").addEventListener("input", e => setEmail(e.target.value, "email"));
+$("email-side").addEventListener("input", e => setEmail(e.target.value, "email-side"));
 $("mail").addEventListener("click", e => {
   if ($("mail").getAttribute("aria-disabled") === "true") { e.preventDefault(); $("email").focus(); return; }
   $("copy-msg").textContent = "Your email app should open with the letter. Check it and press Send there.";
 });
+let sending = false, lastSent = 0;
+const COOLDOWN_MS = 30000;
+function sendMsg(text, kind) {
+  ["send-msg", "send-msg-side"].forEach(id => { $(id).textContent = text; $(id).className = "send-msg" + (kind ? " " + kind : ""); });
+}
+async function sendEmail(fromId) {
+  const email = state.email.trim(); const problem = emailProblem(email);
+  if (!email || problem) { sendMsg(problem || "Type your email first.", "bad"); $(fromId === "send" ? "email" : "email-side").focus(); return; }
+  if (!EMAIL_READY) { sendMsg("Email sending is not set up yet. Add your EmailJS keys to the page.", "bad"); return; }
+  if (!window.emailjs) { sendMsg("The email service did not load. Check your connection and reload the page.", "bad"); return; }
+  const wait = COOLDOWN_MS - (Date.now() - lastSent);
+  if (wait > 0) { sendMsg("Wait " + Math.ceil(wait / 1000) + " seconds before you send again.", "bad"); return; }
+  if (sending) return;
+  sending = true; ["send", "send-side"].forEach(id => $(id).disabled = true); sendMsg("Sending…");
+  try {
+    await emailjs.send(EMAILJS.serviceId, EMAILJS.templateId, {
+      to_email: email,
+      to_name: state.name.trim() || "there",
+      subject: "Clubs I can join",
+      message: makeLetter()
+    }, { publicKey: EMAILJS.publicKey });
+    lastSent = Date.now();
+    sendMsg("Sent to " + email + ". Check your inbox and spam folder.", "ok");
+  } catch (e) {
+    sendMsg("The email did not send" + (e && e.text ? " (" + e.text + ")" : "") + ". Try again, or use Copy letter.", "bad");
+  } finally {
+    sending = false; ["send", "send-side"].forEach(id => $(id).disabled = false);
+  }
+}
+$("send").addEventListener("click", () => sendEmail("send"));
+$("send-side").addEventListener("click", () => sendEmail("send-side"));
 $("copy").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(makeLetter()); $("copy-msg").textContent = "Letter copied. Paste it into your email."; }
   catch (e) {
